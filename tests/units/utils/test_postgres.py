@@ -49,7 +49,7 @@ def test_get_table_data_types(mock_adbc_connect):
     assert result == expected
 
 
-@patch("pg2pyrquet.utils.postgres.psycopg2.connect")
+@patch("pg2pyrquet.utils.postgres.psycopg.connect")
 def test_get_databases_list(mock_connect):
     mock_cursor = MagicMock()
     mock_cursor.fetchall.return_value = [("db1",), ("db2",)]
@@ -75,7 +75,7 @@ def test_check_db_does_not_exist(mock_get_databases_list):
     assert check_db_exists(database="test_db") is False
 
 
-@patch("pg2pyrquet.utils.postgres.psycopg2.connect")
+@patch("pg2pyrquet.utils.postgres.psycopg.connect")
 def test_get_database_tables(mock_connect):
     mock_cursor = MagicMock()
     mock_cursor.fetchall.return_value = [("table1",), ("table2",)]

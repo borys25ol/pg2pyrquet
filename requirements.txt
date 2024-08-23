@@ -1,5 +1,5 @@
 adbc_driver_postgresql==1.1.0
-psycopg2-binary==2.9.9
+psycopg-binary==3.2.1
 pyarrow==17.0.0
 pydantic-settings==2.4.0
 pydantic[dotenv]==2.8.2

@@ -35,12 +35,12 @@ def test_write_batch_to_parquet():
 
 
 @patch("pg2pyrquet.utils.parquet.ParquetWriter")
-@patch("pg2pyrquet.utils.postgres.psycopg2.connect")
+@patch("pg2pyrquet.utils.postgres.psycopg.connect")
 @patch("pg2pyrquet.utils.parquet.write_batch_to_parquet")
 @patch("pg2pyrquet.utils.parquet.reset_column_values")
 def test_process_export_to_parquet(
     mock_parquet_writer,
-    mock_psycopg2_connect,
+    mock_psycopg_connect,
     mock_write_batch_to_parquet,
     mock_reset_column_values,
 ):
@@ -53,7 +53,7 @@ def test_process_export_to_parquet(
         {"field1": 2, "field2": "b"},
     ]
     mock_cursor.itersize = 1
-    mock_psycopg2_connect.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value = (
+    mock_psycopg_connect.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value = (
         mock_cursor
     )
 

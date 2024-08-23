@@ -1,9 +1,9 @@
 from collections import defaultdict
 from pathlib import Path
 
-import psycopg2
+import psycopg
 import pyarrow as pa
-from psycopg2.extras import RealDictCursor
+from psycopg.rows import dict_row
 from pyarrow import Schema, array, record_batch
 from pyarrow.parquet import ParquetWriter
 
@@ -76,11 +76,11 @@ def process_export_to_parquet(
     schema = pa.schema(fields=data_types)
 
     with ParquetWriter(where=output_file, schema=schema) as writer:
-        with psycopg2.connect(dsn=dsn) as conn:
+        with psycopg.connect(dsn) as conn:
             logger.info("Connected to DB, starting to execute query...")
 
             with conn.cursor(
-                name="pg-to-parquet", cursor_factory=RealDictCursor
+                name="pg-to-parquet", row_factory=dict_row
             ) as cur:
                 cur.itersize = batch_size
                 cur.execute(SELECT_ALL_TABLE_QUERY.format(table_name=table))

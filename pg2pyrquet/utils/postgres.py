@@ -1,4 +1,4 @@
-import psycopg2
+import psycopg
 from adbc_driver_postgresql.dbapi import connect as adbc_connect
 from pyarrow import DataType
 
@@ -69,7 +69,7 @@ def get_databases_list() -> list[str]:
     """
     dsn = get_postgres_dsn(database="postgres")
 
-    with psycopg2.connect(dsn=dsn) as conn:
+    with psycopg.connect(dsn) as conn:
         with conn.cursor() as cur:
             cur.execute(SELECT_DATABASES_QUERY)
             return [db_name for (db_name,) in cur.fetchall()]
@@ -100,7 +100,7 @@ def get_database_tables(database: str) -> list[str]:
     """
     dsn = get_postgres_dsn(database=database)
 
-    with psycopg2.connect(dsn=dsn) as conn:
+    with psycopg.connect(dsn) as conn:
         with conn.cursor() as cur:
             cur.execute(SELECT_TABLES_QUERY)
             return [table_name for (table_name,) in cur.fetchall()]
