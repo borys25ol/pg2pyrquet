@@ -51,7 +51,7 @@ POSTGRES_PORT=<postgres-port>
 Usage
 -----
 
-The primary command provided by this tool is `export-table` and ``export-tables`` commands, 
+The primary command provided by this tool is `export-table` and `export-tables` commands,
 which allows you to export a PostgreSQL table or all PostgreSQL database tables to a Parquet files.
 
 ### Export a Single Table
