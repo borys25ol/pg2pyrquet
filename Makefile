@@ -10,6 +10,12 @@ install_hooks:
 run_hooks:
 	pre-commit run --all-files
 
+test:
+	python -m pytest -v ./tests
+
+test-cov:
+	python -m pytest  --cov=./pg2pyrquet --cov-report term-missing ./tests
+
 check_style:
 	flake8 pg2pyrquet && isort pg2pyrquet --diff && black pg2pyrquet --check
 
