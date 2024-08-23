@@ -57,7 +57,7 @@ def get_table_data_types(dsn: str, table: str) -> dict[str, DataType]:
     with adbc_connect(uri=dsn) as conn:
         with conn.cursor() as cur:
             cur.execute(SELECT_FIRST_ROW_QUERY.format(table_name=table))
-            return {column.name: column.type for column in cur.description}
+            return {column[0]: column[1] for column in cur.description}
 
 
 def get_databases_list() -> list[str]:
