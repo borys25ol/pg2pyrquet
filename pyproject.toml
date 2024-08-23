@@ -26,3 +26,8 @@ ensure_newline_before_comments = true
 use_parentheses = true
 skip_gitignore = true
 skip_glob = ['.ve', '.git']
+
+[tool.coverage.run]
+omit = [
+    "pg2pyrquet/__main__.py",
+]
