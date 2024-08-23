@@ -10,7 +10,7 @@ from pg2pyrquet.utils.path import validate_output_path
 
 
 def test_validate_output_path_existing_directory():
-    path = Path("./existing/directory")
+    path = Path("./existing")
     path.mkdir(parents=True, exist_ok=True)
     assert validate_output_path(output_path=path) == path
     path.rmdir()
