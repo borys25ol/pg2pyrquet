@@ -8,6 +8,18 @@ def write_batch_to_parquet(
     data: dict[str, list],
     schema: Schema,
 ) -> None:
+    """
+    Writes a batch of data to a Parquet file using the provided writer.
+
+    Args:
+        writer (ParquetWriter): The ParquetWriter instance used to write data.
+        fields_types (dict[str, pa.DataType]): A dictionary mapping column names to their data types.
+        data (dict[str, list]): A dictionary where keys are column names and values are lists of column data.
+        schema (Schema): The schema defining the structure of the Parquet file.
+
+    Returns:
+        None
+    """
     batch = record_batch(
         data=[
             array(obj=data[field], type=fields_types[field])
