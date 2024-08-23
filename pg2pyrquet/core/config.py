@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pg2pyrquet.core.settings.app import AppSettings
+from pg2pyrquet.core.settings.project import AppSettings
 
 
 @lru_cache
