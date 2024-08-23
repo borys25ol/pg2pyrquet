@@ -3,7 +3,7 @@ from typing import Annotated
 import typer
 
 from pg2pyrquet.core.logging import get_logger
-from pg2pyrquet.utils.parquet import process_export_to_parquet
+from pg2pyrquet.export import export_to_parquet
 from pg2pyrquet.utils.path import validate_output_path
 from pg2pyrquet.utils.postgres import (
     get_database_tables,
@@ -48,7 +48,7 @@ def export_tables(
 
         fields_types = get_table_data_types(dsn=dsn, table=table)
 
-        process_export_to_parquet(
+        export_to_parquet(
             dsn=dsn,
             table=table,
             output_file=output_path / f"{table}.parquet",
@@ -85,7 +85,7 @@ def export_table(
 
     fields_types = get_table_data_types(dsn=dsn, table=table)
 
-    process_export_to_parquet(
+    export_to_parquet(
         dsn=dsn,
         table=table,
         output_file=output_path / output_file,
