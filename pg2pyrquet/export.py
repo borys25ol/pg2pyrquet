@@ -8,7 +8,10 @@ from pyarrow.parquet import ParquetWriter
 
 from pg2pyrquet.core.logging import get_logger
 from pg2pyrquet.utils.parquet import write_batch_to_parquet
-from pg2pyrquet.utils.postgres import SELECT_ALL_TABLE_QUERY
+from pg2pyrquet.utils.postgres import (
+    SELECT_ALL_TABLE_QUERY,
+    get_table_data_types,
+)
 
 logger = get_logger(name=__name__)
 
@@ -28,11 +31,7 @@ def reset_column_values(
 
 
 def export_to_parquet(
-    dsn: str,
-    table: str,
-    output_file: Path,
-    batch_size: int,
-    data_types: dict[str, pa.DataType],
+    dsn: str, table: str, output_file: Path, batch_size: int
 ) -> None:
     """
     Processes export the specified table from the database to a Parquet file.
@@ -42,9 +41,10 @@ def export_to_parquet(
         table (str): The name of the table to dump.
         output_file (Path): The path to the output Parquet file.
         batch_size (int): The number of rows to process in each batch.
-        data_types (dict[str, pa.DataType]): A dictionary mapping column names to their data types.
     """
     records = defaultdict(list)
+
+    data_types = get_table_data_types(dsn=dsn, table=table)
     schema = pa.schema(fields=data_types)
 
     with ParquetWriter(where=output_file, schema=schema) as writer:

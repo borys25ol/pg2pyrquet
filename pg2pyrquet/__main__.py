@@ -8,7 +8,6 @@ from pg2pyrquet.utils.path import validate_output_path
 from pg2pyrquet.utils.postgres import (
     get_database_tables,
     get_postgres_dsn,
-    get_table_data_types,
     validate_database_exists,
     validate_table_exists,
 )
@@ -45,15 +44,11 @@ def export_tables(
 
     for table in tables:
         logger.info(f"Starting to dump table: {table}")
-
-        fields_types = get_table_data_types(dsn=dsn, table=table)
-
         export_to_parquet(
             dsn=dsn,
             table=table,
             output_file=output_path / f"{table}.parquet",
             batch_size=batch_size,
-            data_types=fields_types,
         )
 
 
@@ -82,15 +77,11 @@ def export_table(
     output_path = validate_output_path(output_path=output_path)
 
     logger.info(f"Starting to dump table: {table}")
-
-    fields_types = get_table_data_types(dsn=dsn, table=table)
-
     export_to_parquet(
         dsn=dsn,
         table=table,
         output_file=output_path / output_file,
         batch_size=batch_size,
-        data_types=fields_types,
     )
 
 

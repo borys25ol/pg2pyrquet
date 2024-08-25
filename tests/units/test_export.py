@@ -15,11 +15,16 @@ def test_reset_column_values():
 
 @patch("pg2pyrquet.export.ParquetWriter")
 @patch("pg2pyrquet.export.reset_column_values")
+@patch(
+    "pg2pyrquet.export.get_table_data_types",
+    retun_value={"field1": pa.int32(), "field2": pa.string()},
+)
 @patch("pg2pyrquet.utils.postgres.psycopg.connect")
 @patch("pg2pyrquet.utils.parquet.write_batch_to_parquet")
 def test_process_export_to_parquet(
     mock_parquet_writer,
     mock_reset_column_values,
+    mock_get_table_data_types,
     mock_psycopg_connect,
     mock_write_batch_to_parquet,
 ):
@@ -40,14 +45,9 @@ def test_process_export_to_parquet(
     table = "test_table"
     output_file = Path("./data/pytest.parquet")
     batch_size = 1
-    data_types = {"field1": pa.int32(), "field2": pa.string()}
 
     export_to_parquet(
-        dsn=dsn,
-        table=table,
-        output_file=output_file,
-        batch_size=batch_size,
-        data_types=data_types,
+        dsn=dsn, table=table, output_file=output_file, batch_size=batch_size
     )
 
     # Check if the writer was called to write batches
