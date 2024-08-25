@@ -4,7 +4,7 @@ from pyarrow.parquet import ParquetWriter
 
 from pg2pyrquet.core.logging import get_logger
 
-logger = get_logger(name=__file__)
+logger = get_logger(name=__name__)
 
 
 def write_batch_to_parquet(

@@ -10,7 +10,7 @@ from pg2pyrquet.core.logging import get_logger
 from pg2pyrquet.utils.parquet import write_batch_to_parquet
 from pg2pyrquet.utils.postgres import SELECT_ALL_TABLE_QUERY
 
-logger = get_logger(name=__file__)
+logger = get_logger(name=__name__)
 
 
 def reset_column_values(

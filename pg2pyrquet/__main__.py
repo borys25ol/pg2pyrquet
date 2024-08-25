@@ -14,7 +14,7 @@ from pg2pyrquet.utils.postgres import (
 )
 
 app = typer.Typer()
-logger = get_logger(name=__file__)
+logger = get_logger(name=__name__)
 
 
 DEFAULT_BATCH_SIZE = 10000
