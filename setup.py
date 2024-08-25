@@ -41,7 +41,7 @@ setup(
     license="MIT",
     entry_points="""
         [console_scripts]
-        pg2pyrquet=pg2pyrquet.__main__:cli
+        pg2pyrquet=pg2pyrquet.__main__:app
     """,
     packages=packages,
     package_data={"pg2pyrquet": ["py.typed"]},
