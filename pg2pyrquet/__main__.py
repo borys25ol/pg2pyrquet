@@ -20,7 +20,7 @@ DEFAULT_BATCH_SIZE = 10000
 
 
 @app.command()
-def export_tables(
+def export_database(
     database: Annotated[str, typer.Option("--database")],
     output_path: Annotated[str, typer.Option("--folder")],
     batch_size: int = DEFAULT_BATCH_SIZE,

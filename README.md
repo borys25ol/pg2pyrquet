@@ -51,7 +51,7 @@ POSTGRES_PORT=<postgres-port>
 Usage
 -----
 
-The primary command provided by this tool is `export-table` and `export-tables` commands,
+The primary command provided by this tool is `export-table` and `export-database` commands,
 which allows you to export a PostgreSQL table or all PostgreSQL database tables to a Parquet files.
 
 ### Export a Single Table
@@ -78,15 +78,15 @@ python -m pg2pyrquet export-table \
 - `--output-file`: The name of the output Parquet file.
 - `--batch-size`: The number of rows to process in each batch. This helps in managing memory usage for large tables.
 
-### Export All Tables
+### Export All Database Tables
 
-To export all tables from a PostgreSQL database to Parquet files, use the `export-tables` command.
+To export all tables from a PostgreSQL database to Parquet files, use the `export-database` command.
 This command exports each table into a separate Parquet file in the specified output folder.
 
 #### Example Command
 
 ```shell
-python -m pg2pyrquet export-tables \
+python -m pg2pyrquet export-database \
     --database <database_name> \
     --folder <output_folder> \
     --batch-size <batch_size>
@@ -100,7 +100,7 @@ python -m pg2pyrquet export-tables \
 
 
 #### Note on File Naming
-When using the `export-tables` command, each Parquet file will be named according to the table name, following the format `{table_name}.parquet`.
+When using the `export-database` command, each Parquet file will be named according to the table name, following the format `{table_name}.parquet`.
 
 
 Contributing
