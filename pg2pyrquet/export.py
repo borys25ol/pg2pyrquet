@@ -8,10 +8,7 @@ from pyarrow.parquet import ParquetWriter
 
 from pg2pyrquet.core.logging import get_logger
 from pg2pyrquet.utils.parquet import write_batch_to_parquet
-from pg2pyrquet.utils.postgres import (
-    SELECT_ALL_TABLE_QUERY,
-    get_table_data_types,
-)
+from pg2pyrquet.utils.postgres import get_query_data_types
 
 logger = get_logger(name=__name__)
 
@@ -31,20 +28,20 @@ def reset_column_values(
 
 
 def export_to_parquet(
-    dsn: str, table: str, output_file: Path, batch_size: int
+    dsn: str, output_file: Path, batch_size: int, query: str
 ) -> None:
     """
     Processes export the specified table from the database to a Parquet file.
 
     Args:
         dsn (str): The Data Source Name for connecting to the PostgreSQL database.
-        table (str): The name of the table to dump.
         output_file (Path): The path to the output Parquet file.
         batch_size (int): The number of rows to process in each batch.
+        query (str): SQL query to execute.
     """
     records = defaultdict(list)
 
-    data_types = get_table_data_types(dsn=dsn, table=table)
+    data_types = get_query_data_types(dsn=dsn, query=query)
     schema = pa.schema(fields=data_types)
 
     with ParquetWriter(where=output_file, schema=schema) as writer:
@@ -55,7 +52,7 @@ def export_to_parquet(
                 name="pg-to-parquet", row_factory=dict_row
             ) as cur:
                 cur.itersize = batch_size
-                cur.execute(SELECT_ALL_TABLE_QUERY.format(table_name=table))
+                cur.execute(query)
                 logger.info("Query executed...")
 
                 for index, record in enumerate(cur):

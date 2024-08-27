@@ -1,3 +1,5 @@
+import re
+
 import psycopg
 from adbc_driver_postgresql.dbapi import connect as adbc_connect
 from pyarrow import DataType
@@ -9,9 +11,6 @@ from pg2pyrquet.core.exceptions import (
 )
 
 settings = get_app_settings()
-
-# Query to select the first row from a specified table
-SELECT_FIRST_ROW_QUERY = "SELECT * FROM {table_name} LIMIT 1;"
 
 # Query to select all rows from a specified table
 SELECT_ALL_TABLE_QUERY = "SELECT * FROM {table_name};"
@@ -43,20 +42,34 @@ def get_postgres_dsn(database: str) -> str:
     )
 
 
-def get_table_data_types(dsn: str, table: str) -> dict[str, DataType]:
+def get_default_query(table: str) -> str:
+    """
+    Generates the default query to select all rows from the specified table.
+
+    Args:
+        table (str): The name of the table to query.
+
+    Returns:
+        str: The default query to select all rows from the table.
+    """
+    return SELECT_ALL_TABLE_QUERY.format(table_name=table)
+
+
+def get_query_data_types(dsn: str, query: str) -> dict[str, DataType]:
     """
     Retrieves the data types of columns in the specified table.
 
     Args:
         dsn (str): The Data Source Name for connecting to the PostgreSQL database.
-        table (str): The name of the table.
+        query (str): The query to execute to retrieve the data types.
 
     Returns:
         dict[str, DataType]: A dictionary mapping column names to their data types.
     """
+    query_with_limit = format_query_with_limit(query=query)
     with adbc_connect(uri=dsn) as conn:
         with conn.cursor() as cur:
-            cur.execute(SELECT_FIRST_ROW_QUERY.format(table_name=table))
+            cur.execute(query_with_limit)
             return {column[0]: column[1] for column in cur.description}
 
 
@@ -159,3 +172,25 @@ def validate_table_exists(database: str, table: str) -> str:
             f"Table '{table}' does not exist in database '{database}'."
         )
     return table
+
+
+def format_query_with_limit(query: str) -> str:
+    """
+    Format the specific query.
+
+    Add a LIMIT 1 clause if the query does not already contain a LIMIT clause.
+
+    Change the LIMIT clause to LIMIT 1 if the query already contains a LIMIT clause.
+
+    Args:
+        query (str): The query to format.
+
+    Returns:
+        str: The formatted query with LIMIT 1 clause.
+    """
+    query = query.replace(";", "")
+
+    if "limit" not in query.lower():
+        return f"{query} LIMIT 1;"
+
+    return re.sub(r"(?i)limit\s+\d+", "LIMIT 1;", string=query)
