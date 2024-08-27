@@ -10,7 +10,7 @@ from pg2pyrquet.utils.postgres import (
     get_database_tables,
     get_default_query,
     get_postgres_dsn,
-    validate_database_exists,
+    validate_database_connection,
     validate_table_exists,
 )
 
@@ -23,6 +23,8 @@ DEFAULT_BATCH_SIZE = 10000
 
 @app.command()
 def export_database(
+    host: Annotated[str, typer.Option("--host")],
+    port: Annotated[str, typer.Option("--port")],
     database: Annotated[str, typer.Option("--database")],
     output_path: Annotated[str, typer.Option("--folder")],
     batch_size: int = DEFAULT_BATCH_SIZE,
@@ -31,15 +33,17 @@ def export_database(
     Dumps all tables from the specified PostgreSQL database to Parquet files.
 
     Args:
+        host (str): The host of the PostgreSQL database.
+        port (str): The port of the PostgreSQL database.
         database (str): The name of the PostgreSQL database.
         output_path (str): The directory where Parquet files will be saved.
         batch_size (int, optional): The number of rows to process in each batch. Defaults to DEFAULT_BATCH_SIZE.
     """
-    dsn = get_postgres_dsn(database=database)
+    dsn = get_postgres_dsn(host=host, port=port, database=database)
 
-    database = validate_database_exists(database=database)
+    validate_database_connection(dsn=dsn)
 
-    tables = get_database_tables(database=database)
+    tables = get_database_tables(dsn=dsn)
     logger.info(f"Found tables to dump: {tables}")
 
     output_path = validate_output_path(output_path=output_path)
@@ -57,6 +61,8 @@ def export_database(
 
 @app.command()
 def export_table(
+    host: Annotated[str, typer.Option("--host")],
+    port: Annotated[str, typer.Option("--port")],
     database: Annotated[str, typer.Option("--database")],
     table: Annotated[str, typer.Option("--table")],
     output_path: Annotated[str, typer.Option("--folder")],
@@ -67,16 +73,19 @@ def export_table(
     Dumps the specified table from the given PostgreSQL database to a Parquet file.
 
     Args:
+        host (str): The host of the PostgreSQL database.
+        port (str): The port of the PostgreSQL database.
         database (str): The name of the PostgreSQL database.
         table (str): The name of the table to dump.
         output_path (str): The directory where the Parquet file will be saved.
         output_file (str, optional): The name of the output Parquet file. Defaults to "output.parquet".
         batch_size (int, optional): The number of rows to process in each batch. Defaults to DEFAULT_BATCH_SIZE.
     """
-    dsn = get_postgres_dsn(database=database)
+    dsn = get_postgres_dsn(host=host, port=port, database=database)
 
-    database = validate_database_exists(database=database)
-    table = validate_table_exists(database=database, table=table)
+    validate_database_connection(dsn=dsn)
+
+    table = validate_table_exists(dsn=dsn, table=table)
     output_path = validate_output_path(output_path=output_path)
 
     query = get_default_query(table=table)
@@ -92,6 +101,8 @@ def export_table(
 
 @app.command()
 def export_query(
+    host: Annotated[str, typer.Option("--host")],
+    port: Annotated[str, typer.Option("--port")],
     database: Annotated[str, typer.Option("--database")],
     query_file: Annotated[str, typer.Option("--query-file")],
     output_path: Annotated[str, typer.Option("--folder")],
@@ -102,15 +113,17 @@ def export_query(
     Dumps the specified custom query from the given PostgreSQL database to a Parquet file.
 
     Args:
+        host (str): The host of the PostgreSQL database.
+        port (str): The port of the PostgreSQL database.
         database (str): The name of the PostgreSQL database.
         query_file (str): The path of the file with SQL query.
         output_path (str): The directory where the Parquet file will be saved.
         output_file (str, optional): The name of the output Parquet file. Defaults to "output.parquet".
         batch_size (int, optional): The number of rows to process in each batch. Defaults to DEFAULT_BATCH_SIZE.
     """
-    dsn = get_postgres_dsn(database=database)
+    dsn = get_postgres_dsn(host=host, port=port, database=database)
 
-    validate_database_exists(database=database)
+    validate_database_connection(dsn=dsn)
     output_path = validate_output_path(output_path=output_path)
     query_path = validate_query_path(query_path=query_file)
 

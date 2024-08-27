@@ -51,3 +51,13 @@ def test_validate_query_path_is_directory():
     with pytest.raises(QueryFileIsADirectoryError):
         validate_query_path(query_path=query_path)
     query_path.rmdir()
+
+
+def test_directory_does_not_exist_error():
+    with pytest.raises(DirectoryDoesNotExistError):
+        raise DirectoryDoesNotExistError("Test error")
+
+
+def test_directory_is_a_file_error():
+    with pytest.raises(DirectoryIsAFileError):
+        raise DirectoryIsAFileError("Test error")

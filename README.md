@@ -39,20 +39,10 @@ pip install -r requirements.txt
 Configuration
 --------------
 
-Replace `.env.example` with real `.env`, changing placeholders
-
-```
-POSTGRES_USER=<postgres-user>
-POSTGRES_PASSWORD=<postgres-password>
-POSTGRES_HOST=<postgres-host>
-POSTGRES_PORT=<postgres-port>
-```
-
-Or you can set the environment variables directly:
+If your database has a password, you can set the `POSTGRES_USER` and `POSTGRES_PASSWORD` environment variables to avoid entering them every time you run the tool.
+For security reasons, it is recommended to use environment variables to store sensitive information.
 
 ```shell
-export POSTGRES_HOST=<host>
-export POSTGRES_PORT=<port>
 export POSTGRES_USER=<user>
 export POSTGRES_PASSWORD=<password>
 ````
@@ -60,10 +50,6 @@ export POSTGRES_PASSWORD=<password>
 Or using more secure way:
 
 ```shell
-read -s -p "Enter POSTGRES host: " POSTGRES_HOST || export POSTGRES_HOST
-
-read -s -p "Enter POSTGRES port: " POSTGRES_PORT || export POSTGRES_PORT
-
 read -s -p "Enter POSTGRES User: " POSTGRES_USER || export POSTGRES_USER
 
 read -s -p "Enter POSTGRES Password: " POSTGRES_PASSWORD || export POSTGRES_PASSWORD
@@ -72,7 +58,7 @@ read -s -p "Enter POSTGRES Password: " POSTGRES_PASSWORD || export POSTGRES_PASS
 Usage
 -----
 
-The primary command provided by this tool is `export-table` and `export-database` commands,
+The primary command provided by this tool is `export-table`, `export-database` and `export-query` commands,
 which allows you to export a PostgreSQL table or all PostgreSQL database tables to a Parquet files.
 
 ### Export a Single Table
@@ -84,6 +70,8 @@ This command allows you to specify the database, table, output folder, output fi
 
 ```shell
 python -m pg2pyrquet export-table \
+    --host <host> \
+    --port <port> \
     --database <database_name> \
     --table <table_name> \
     --folder <output_folder> \
@@ -92,7 +80,8 @@ python -m pg2pyrquet export-table \
 ```
 
 #### Command Options
-
+- `--host`: The hostname of the PostgreSQL server.
+- `--port`: The port number of the PostgreSQL server.
 - `--database`: The name of the PostgreSQL database you want to export data from.
 - `--table`: The specific table within the database to export.
 - `--folder`: The directory where the Parquet file will be saved.
@@ -108,6 +97,8 @@ This command exports each table into a separate Parquet file in the specified ou
 
 ```shell
 python -m pg2pyrquet export-database \
+    --host <host> \
+    --port <port> \
     --database <database_name> \
     --folder <output_folder> \
     --batch-size <batch_size>
@@ -115,6 +106,8 @@ python -m pg2pyrquet export-database \
 
 #### Command Options
 
+- `--host`: The hostname of the PostgreSQL server.
+- `--port`: The port number of the PostgreSQL server.
 - `--database`: The name of the PostgreSQL database you want to export data from.
 - `--folder`: The directory where the Parquet file will be saved.
 - `--batch-size`: The number of rows to process in each batch. This helps in managing memory usage for large tables.
@@ -133,6 +126,8 @@ This command allows you to specify the database, the file containing the SQL que
 
 ```shell
 python -m pg2pyrquet export-query \
+    --host <host> \
+    --port <port> \
     --database <database_name> \
     --query-file <query_file_path> \
     --folder <output_folder> \
@@ -142,6 +137,8 @@ python -m pg2pyrquet export-query \
 
 #### Command Options
 
+- `--host`: The hostname of the PostgreSQL server.
+- `--port`: The port number of the PostgreSQL server.
 - `--database`: The name of the PostgreSQL database you want to export data from.
 - `--query-file`: The path to the file containing the SQL query (like `custom-query.sql`).
 - `--folder`: The directory where the Parquet file will be saved.
@@ -165,39 +162,69 @@ Also, you have the ability execute all available commands as Python functions:
 Create a new file `export.py` with the following content:
 
 ```python
+import os
+
 from pg2pyrquet import export_database, export_query, export_table
+
+
+def set_postgres_auth_env(username: str, password: str) -> None:
+    """
+    Set the PostgreSQL username and password as environment variables
+
+    Args:
+        username (str): The username for the PostgreSQL database.
+        password (str): The password for the PostgreSQL database.
+    """
+    os.environ["POSTGRES_USER"] = username
+    os.environ["POSTGRES_PASSWORD"] = password
 
 
 def run_export_database() -> None:
     export_database(
-        database="test_database", output_path="./data", batch_size=5000
+        host="localhost",
+        port="5432",
+        database="test_database",
+        output_path="./data",
+        batch_size=5000,
     )
 
 
 def run_export_table() -> None:
     export_table(
+        host="localhost",
+        port="5432",
         database="test_database",
         table="test_table",
         output_path="./data",
-        output_file="./data/test_table.parquet",
+        output_file="test_table.parquet",
         batch_size=5000,
     )
 
 
 def run_export_query() -> None:
     export_query(
+        host="localhost",
+        port="5432",
         database="test_database",
-        query_file="./data/query.sql",
+        query_file="./custom_query.sql",
         output_path="./data",
-        output_file="./data/query.parquet",
+        output_file="query.parquet",
         batch_size=5000,
     )
 
 
-if __name__ == "__main__":
+def main() -> None:
+    # If your database has a password,
+    # you can set the POSTGRES_USER and POSTGRES_PASSWORD environment variables.
+    set_postgres_auth_env(username="username", password="password")
+
     run_export_database()
     run_export_table()
     run_export_query()
+
+
+if __name__ == "__main__":
+    main()
 
 ```
 

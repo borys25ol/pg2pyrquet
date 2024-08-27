@@ -10,9 +10,15 @@ class DirectoryIsAFileError(Exception):
     """
 
 
-class DatabaseDoesNotExistError(Exception):
+class DatabaseConnectionError(Exception):
     """
     Raised when a specified database does not exist.
+    """
+
+
+class InvalidPostgresCredentialsError(Exception):
+    """
+    Raised when invalid PostgreSQL credentials are provided.
     """
 
 
