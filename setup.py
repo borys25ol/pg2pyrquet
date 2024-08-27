@@ -21,9 +21,6 @@ install_requires = (
         "psycopg==3.2.1",
         "psycopg-binary==3.2.1",
         "pyarrow==17.0.0",
-        "pydantic-settings==2.4.0",
-        "pydantic==2.8.2",
-        "python-dotenv==1.0.1",
         "typer==0.12.4",
     ],
 )
