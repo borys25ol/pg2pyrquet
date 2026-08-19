@@ -295,6 +295,23 @@ python export.py
 `numeric` is stored as text so no digit is lost. Cast it before doing
 arithmetic on it.
 
+## Read-Only by Design
+
+Every export runs inside a read-only transaction, so the server refuses
+any statement that would write — including a write hidden inside a CTE:
+
+```sql
+WITH deleted AS (DELETE FROM orders RETURNING *) SELECT * FROM deleted;
+```
+
+The query file itself is not inspected beyond being non-empty. A keyword
+check cannot tell reads from writes: it accepts the statement above and
+rejects valid forms such as `TABLE orders`. The server can, so the server
+decides.
+
+One consequence worth knowing: a query calling a writing function, such
+as `SELECT nextval('my_seq')`, is refused too.
+
 ## Exit Codes and Errors
 
 An expected failure, such as a missing table or an unreadable directory,

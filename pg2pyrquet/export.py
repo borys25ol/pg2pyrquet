@@ -4,6 +4,9 @@ Parquet export.
 This module owns the data path and runs on ADBC, which returns Arrow
 batches directly, so no value is converted to a Python object.
 
+Every export runs in a read-only transaction, so the server refuses any
+statement that would write, including a DELETE hidden inside a CTE.
+
 The metadata path lives in `pg2pyrquet.utils.postgres` and runs on
 psycopg.
 """
@@ -14,9 +17,18 @@ from adbc_driver_postgresql import StatementOptions
 from adbc_driver_postgresql.dbapi import connect
 from pyarrow.parquet import ParquetWriter
 
+from pg2pyrquet.core.exceptions import InvalidQueryError
 from pg2pyrquet.core.logging import get_logger
 
 logger = get_logger(name=__name__)
+
+# Makes the server reject any statement that would write
+READ_ONLY_TRANSACTION = "SET TRANSACTION READ ONLY"
+
+# SQLSTATE raised when a statement tries to write in a read-only
+# transaction. Postgres reports it against the outer SELECT, so the
+# message needs translating before a user sees it.
+READ_ONLY_SQLSTATE = "25006"
 
 
 def normalise_query(query: str) -> str:
@@ -66,7 +78,20 @@ def export_to_parquet(
             }
         )
         logger.info("Connected to DB, starting to execute query...")
-        cur.execute(normalise_query(query=query))
+        cur.execute(READ_ONLY_TRANSACTION)
+
+        try:
+            cur.execute(normalise_query(query=query))
+        except Exception as error:
+            if READ_ONLY_SQLSTATE not in str(error):
+                raise
+
+            raise InvalidQueryError(
+                "The query would modify the database, and pg2pyrquet"
+                " only reads. Every export runs in a read-only"
+                " transaction, which also covers a write hidden inside"
+                " a CTE."
+            ) from error
         logger.info("Query executed...")
 
         reader = cur.fetch_record_batch()
