@@ -55,28 +55,43 @@ def export_to_parquet(
                 cur.execute(query)
                 logger.info("Query executed...")
 
-                for index, record in enumerate(cur):
+                buffered_rows = 0
+                batch_number = 0
+
+                for record in cur:
                     for column, value in record.items():
                         records[column].append(value)
 
-                    if index % batch_size == 0:
-                        logger.info(
-                            f"Writing batch {index // batch_size + 1} to the file: {output_file}"
-                        )
-                        write_batch_to_parquet(
-                            writer=writer,
-                            fields_types=data_types,
-                            data=records,
-                            schema=schema,
-                        )
-                        reset_column_values(
-                            fields_types=data_types, records=records
-                        )
+                    buffered_rows += 1
 
-                write_batch_to_parquet(
-                    writer=writer,
-                    fields_types=data_types,
-                    data=records,
-                    schema=schema,
-                )
+                    if buffered_rows < batch_size:
+                        continue
+
+                    batch_number += 1
+                    logger.info(
+                        f"Writing batch {batch_number} to the file: {output_file}"
+                    )
+                    write_batch_to_parquet(
+                        writer=writer,
+                        fields_types=data_types,
+                        data=records,
+                        schema=schema,
+                    )
+                    reset_column_values(
+                        fields_types=data_types, records=records
+                    )
+                    buffered_rows = 0
+
+                if buffered_rows:
+                    batch_number += 1
+                    logger.info(
+                        f"Writing batch {batch_number} to the file: {output_file}"
+                    )
+                    write_batch_to_parquet(
+                        writer=writer,
+                        fields_types=data_types,
+                        data=records,
+                        schema=schema,
+                    )
+
                 logger.info("Export finished successfully.")
