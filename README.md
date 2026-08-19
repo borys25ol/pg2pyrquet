@@ -111,10 +111,13 @@ python -m pg2pyrquet export-table \
 ```
 
 #### Command Options
-- `--host`: The hostname of the PostgreSQL server.
-- `--port`: The port number of the PostgreSQL server.
-- `--database`: The name of the PostgreSQL database you want to export data from.
+- `--host`: The hostname of the PostgreSQL server. Defaults to `localhost`.
+- `--port`: The port number of the PostgreSQL server. Defaults to `5432`.
+- `--database`: The name of the PostgreSQL database. Required unless `--dsn` is given.
+- `--dsn`: A complete connection string, used instead of the options above. Useful for `sslmode` and other libpq parameters.
+- `--overwrite`: Replace the output file if it already exists. Without it, an existing file stops the export.
 - `--table`: The specific table within the database to export.
+- `--schema`: The schema holding the table. Defaults to `public`.
 - `--folder`: The directory where the Parquet file will be saved.
 - `--output-file`: The name of the output Parquet file.
 - `--batch-size-bytes`: How much the driver reads per batch, in bytes. Defaults to 16 MiB.
@@ -139,13 +142,18 @@ python -m pg2pyrquet export-database \
 
 #### Command Options
 
-- `--host`: The hostname of the PostgreSQL server.
-- `--port`: The port number of the PostgreSQL server.
-- `--database`: The name of the PostgreSQL database you want to export data from.
+- `--host`: The hostname of the PostgreSQL server. Defaults to `localhost`.
+- `--port`: The port number of the PostgreSQL server. Defaults to `5432`.
+- `--database`: The name of the PostgreSQL database. Required unless `--dsn` is given.
+- `--dsn`: A complete connection string, used instead of the options above. Useful for `sslmode` and other libpq parameters.
+- `--overwrite`: Replace the output file if it already exists. Without it, an existing file stops the export.
 - `--folder`: The directory where the Parquet file will be saved.
 - `--batch-size-bytes`: How much the driver reads per batch, in bytes. Defaults to 16 MiB.
 - `--row-group-size`: Maximum rows per Parquet row group. Defaults to 1048576.
 
+
+- `--schema`: The schema to read tables from. Defaults to `public`.
+- `--continue-on-error`: Keep going when a table fails. The command reports how many tables succeeded and exits with code 1 naming the failures.
 
 #### Note on File Naming
 When using the `export-database` command, each Parquet file will be named according to the table name, following the format `{table_name}.parquet`.
@@ -172,9 +180,11 @@ python -m pg2pyrquet export-query \
 
 #### Command Options
 
-- `--host`: The hostname of the PostgreSQL server.
-- `--port`: The port number of the PostgreSQL server.
-- `--database`: The name of the PostgreSQL database you want to export data from.
+- `--host`: The hostname of the PostgreSQL server. Defaults to `localhost`.
+- `--port`: The port number of the PostgreSQL server. Defaults to `5432`.
+- `--database`: The name of the PostgreSQL database. Required unless `--dsn` is given.
+- `--dsn`: A complete connection string, used instead of the options above. Useful for `sslmode` and other libpq parameters.
+- `--overwrite`: Replace the output file if it already exists. Without it, an existing file stops the export.
 - `--query-file`: The path to the file containing the SQL query (like `custom-query.sql`).
 - `--folder`: The directory where the Parquet file will be saved.
 - `--output-file`: The name of the output Parquet file.
@@ -284,6 +294,19 @@ python export.py
 
 `numeric` is stored as text so no digit is lost. Cast it before doing
 arithmetic on it.
+
+## Exit Codes and Errors
+
+An expected failure, such as a missing table or an unreadable directory,
+prints one line and exits with code 1. No traceback is shown. An
+unexpected error keeps its traceback, because that indicates a bug worth
+reporting.
+
+Check the installed version at any time:
+
+```shell
+pg2pyrquet --version
+```
 
 Contributing
 ------------

@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pyarrow as pa
 
-from pg2pyrquet.export import export_to_parquet
+from pg2pyrquet.export import export_to_parquet, normalise_query
 
 SCHEMA = pa.schema([("field1", pa.int32()), ("field2", pa.string())])
 
@@ -71,3 +71,13 @@ def test_writes_nothing_for_an_empty_result():
     writer = run_export(batches=[])
 
     writer.write_batch.assert_not_called()
+
+
+def test_normalise_query_strips_trailing_semicolon():
+    assert normalise_query(query="SELECT 1;\n") == "SELECT 1"
+
+
+def test_normalise_query_keeps_inner_semicolons_untouched():
+    query = "SELECT ';' AS marker"
+
+    assert normalise_query(query=query) == query
