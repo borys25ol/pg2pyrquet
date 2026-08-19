@@ -1,3 +1,13 @@
+"""
+Parquet export.
+
+This module owns the data path and runs on ADBC, which returns Arrow
+batches directly, so no value is converted to a Python object.
+
+The metadata path lives in `pg2pyrquet.utils.postgres` and runs on
+psycopg.
+"""
+
 from pathlib import Path
 
 from adbc_driver_postgresql import StatementOptions
