@@ -2,6 +2,7 @@ from typing import Annotated
 
 import typer
 
+from pg2pyrquet.core.errors import handle_cli_errors
 from pg2pyrquet.core.logging import get_logger
 from pg2pyrquet.export import export_to_parquet
 from pg2pyrquet.utils.files import read_query_from_file
@@ -23,6 +24,7 @@ DEFAULT_ROW_GROUP_SIZE = 1_048_576
 
 
 @app.command()
+@handle_cli_errors
 def export_database(
     host: Annotated[str, typer.Option("--host")],
     port: Annotated[str, typer.Option("--port")],
@@ -66,6 +68,7 @@ def export_database(
 
 
 @app.command()
+@handle_cli_errors
 def export_table(
     host: Annotated[str, typer.Option("--host")],
     port: Annotated[str, typer.Option("--port")],
@@ -112,6 +115,7 @@ def export_table(
 
 
 @app.command()
+@handle_cli_errors
 def export_query(
     host: Annotated[str, typer.Option("--host")],
     port: Annotated[str, typer.Option("--port")],

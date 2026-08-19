@@ -91,24 +91,6 @@ def get_default_query(table: str) -> str:
     return query.as_string()
 
 
-def check_db_exists(dsn: str) -> bool:
-    """
-    Checks if a database with the specified name exists.
-
-    Args:
-        dsn (str): The Data Source Name for the PostgreSQL database.
-
-    Returns:
-        bool: True if the database exists, False otherwise.
-    """
-    try:
-        with psycopg.connect(dsn):
-            return True
-    except psycopg.OperationalError as e:
-        logger.error(f"Error connecting to database: {e}")
-        return False
-
-
 def get_database_tables(dsn: str) -> list[str]:
     """
     Retrieves the list of all tables in the specified database.
@@ -140,24 +122,29 @@ def check_table_exists(dsn: str, table: str) -> bool:
 
 def validate_database_connection(dsn: str) -> str:
     """
-    Validates that the specified database exists.
+    Validates that the database answers, and reports why if it does not.
 
     Args:
         dsn (str): The Data Source Name for the PostgreSQL database.
 
     Returns:
-        str: The validated database name.
+        str: The validated DSN.
 
     Raises:
-        DatabaseConnectionError: If the database does not exist.
+        DatabaseConnectionError: If the connection cannot be opened. The
+            message carries the reason reported by the server, which is
+            often authentication rather than a missing database.
     """
     parsed = urlparse(dsn)
+    database = parsed.path.lstrip("/") or "<unnamed>"
 
-    if not check_db_exists(dsn=dsn):
+    try:
+        with psycopg.connect(dsn):
+            return dsn
+    except psycopg.OperationalError as error:
         raise DatabaseConnectionError(
-            f"Database does not exist: {parsed.path}"
-        )
-    return dsn
+            f"Cannot connect to database '{database}': {error}"
+        ) from error
 
 
 def validate_table_exists(dsn: str, table: str) -> str:

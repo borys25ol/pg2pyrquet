@@ -41,5 +41,9 @@ def get_logger(
     """
     logger = logging.getLogger(name)
     logger.setLevel(level)
-    logger.addHandler(CustomHandler())
+    logger.propagate = False
+
+    if not logger.handlers:
+        logger.addHandler(CustomHandler())
+
     return logger

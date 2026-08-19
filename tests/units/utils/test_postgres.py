@@ -11,7 +11,6 @@ from pg2pyrquet.core.exceptions import (
 )
 from pg2pyrquet.utils.postgres import (
     SELECT_TABLES_QUERY,
-    check_db_exists,
     check_table_exists,
     get_database_tables,
     get_default_query,
@@ -54,22 +53,6 @@ def test_get_postgres_dsn(mock_get_postgres_auth):
     )
     assert get_postgres_dsn(host, port, database) == expected_dsn
     mock_get_postgres_auth.assert_called_once()
-
-
-@patch("pg2pyrquet.utils.postgres.psycopg.connect")
-def test_check_db_exists(mock_connect):
-    dsn = "postgresql://user:password@localhost:5432/testdb"
-    assert check_db_exists(dsn) is True
-    mock_connect.assert_called_once_with(dsn)
-
-
-@patch(
-    "pg2pyrquet.utils.postgres.psycopg.connect", side_effect=OperationalError
-)
-def test_check_db_does_not_exist(mock_connect):
-    dsn = "postgresql://user:password@localhost:5432/testdb"
-    assert check_db_exists(dsn) is False
-    mock_connect.assert_called_once_with(dsn)
 
 
 def test_get_default_query_valid_table():
@@ -140,21 +123,6 @@ def test_check_table_does_not_exist(mock_get_database_tables):
     mock_get_database_tables.assert_called_once_with(dsn=dsn)
 
 
-@patch("pg2pyrquet.utils.postgres.check_db_exists", return_value=True)
-def test_validate_database_connection_exists(mock_check_db_exists):
-    dsn = "postgresql://user:password@localhost:5432/testdb"
-    assert validate_database_connection(dsn) == dsn
-    mock_check_db_exists.assert_called_once_with(dsn=dsn)
-
-
-@patch("pg2pyrquet.utils.postgres.check_db_exists", return_value=False)
-def test_validate_database_connection_does_not_exist(mock_check_db_exists):
-    dsn = "postgresql://user:password@localhost:5432/testdb"
-    with pytest.raises(DatabaseConnectionError):
-        validate_database_connection(dsn)
-    mock_check_db_exists.assert_called_once_with(dsn=dsn)
-
-
 @patch("pg2pyrquet.utils.postgres.check_table_exists", return_value=True)
 def test_validate_table_exists(mock_check_table_exists):
     dsn = "test_dsn"
@@ -180,8 +148,22 @@ def test_get_postgres_auth_escapes_special_characters():
     assert get_postgres_auth() == "user%40corp:p%40ss%3Aw%2Frd%231"
 
 
+@patch(
+    "pg2pyrquet.utils.postgres.psycopg.connect",
+    side_effect=OperationalError("fe_sendauth: no password supplied"),
+)
+def test_validate_connection_reports_the_real_cause(mock_connect):
+    dsn = "postgresql://user@localhost:5432/testdb"
+
+    with pytest.raises(DatabaseConnectionError) as error:
+        validate_database_connection(dsn=dsn)
+
+    assert "no password supplied" in str(error.value)
+
+
 @patch("pg2pyrquet.utils.postgres.psycopg.connect")
-def test_check_db_exists_closes_connection(mock_connect):
+def test_validate_connection_returns_the_dsn(mock_connect):
     dsn = "postgresql://user:password@localhost:5432/testdb"
-    check_db_exists(dsn=dsn)
+
+    assert validate_database_connection(dsn=dsn) == dsn
     mock_connect.return_value.__exit__.assert_called_once()
