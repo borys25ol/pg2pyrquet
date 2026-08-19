@@ -19,6 +19,23 @@ from pg2pyrquet.core.logging import get_logger
 logger = get_logger(name=__name__)
 
 
+def normalise_query(query: str) -> str:
+    """
+    Strips whitespace and any trailing semicolon from the query.
+
+    The driver wraps the query in `COPY (...) TO STDOUT`, so a trailing
+    semicolon becomes a syntax error inside the parentheses. SQL files
+    almost always end with one.
+
+    Args:
+        query (str): The query to normalise.
+
+    Returns:
+        str: The query without a trailing semicolon.
+    """
+    return query.strip().rstrip(";").strip()
+
+
 def export_to_parquet(
     dsn: str,
     output_file: Path,
@@ -49,7 +66,7 @@ def export_to_parquet(
             }
         )
         logger.info("Connected to DB, starting to execute query...")
-        cur.execute(query)
+        cur.execute(normalise_query(query=query))
         logger.info("Query executed...")
 
         reader = cur.fetch_record_batch()

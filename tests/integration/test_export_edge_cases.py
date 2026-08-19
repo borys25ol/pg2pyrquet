@@ -100,3 +100,17 @@ def test_every_table_gets_its_own_file(postgres_dsn, seeded_table, tmp_path):
     finally:
         with psycopg.connect(postgres_dsn, autocommit=True) as conn:
             conn.execute("DROP TABLE IF EXISTS second_table;")
+
+
+def test_query_ending_with_semicolon_and_newline(
+    postgres_dsn, seeded_table, tmp_path
+):
+    output_file = tmp_path / "semicolon.parquet"
+
+    export(
+        dsn=postgres_dsn,
+        output_file=output_file,
+        query=f"SELECT id FROM {seeded_table} ORDER BY id LIMIT 1;\n",
+    )
+
+    assert pq.read_table(output_file).to_pylist() == [{"id": 1}]

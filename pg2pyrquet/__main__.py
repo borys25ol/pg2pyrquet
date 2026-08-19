@@ -8,9 +8,9 @@ from pg2pyrquet.export import export_to_parquet
 from pg2pyrquet.utils.files import read_query_from_file
 from pg2pyrquet.utils.path import validate_output_path, validate_query_path
 from pg2pyrquet.utils.postgres import (
+    build_dsn,
     get_database_tables,
     get_default_query,
-    get_postgres_dsn,
     validate_database_connection,
     validate_table_exists,
 )
@@ -19,6 +19,8 @@ app = typer.Typer()
 logger = get_logger(name=__name__)
 
 
+DEFAULT_HOST = "localhost"
+DEFAULT_PORT = 5432
 DEFAULT_BATCH_SIZE_BYTES = 16 * 1024 * 1024
 DEFAULT_ROW_GROUP_SIZE = 1_048_576
 
@@ -26,10 +28,11 @@ DEFAULT_ROW_GROUP_SIZE = 1_048_576
 @app.command()
 @handle_cli_errors
 def export_database(
-    host: Annotated[str, typer.Option("--host")],
-    port: Annotated[str, typer.Option("--port")],
-    database: Annotated[str, typer.Option("--database")],
     output_path: Annotated[str, typer.Option("--folder")],
+    host: Annotated[str, typer.Option("--host")] = DEFAULT_HOST,
+    port: Annotated[int, typer.Option("--port")] = DEFAULT_PORT,
+    database: Annotated[str | None, typer.Option("--database")] = None,
+    dsn: Annotated[str | None, typer.Option("--dsn")] = None,
     batch_size_bytes: int = DEFAULT_BATCH_SIZE_BYTES,
     row_group_size: int = DEFAULT_ROW_GROUP_SIZE,
 ) -> None:
@@ -38,15 +41,16 @@ def export_database(
 
     Args:
         host (str): The host of the PostgreSQL database.
-        port (str): The port of the PostgreSQL database.
-        database (str): The name of the PostgreSQL database.
+        port (int): The port of the PostgreSQL database.
+        database (str | None): The name of the PostgreSQL database.
+        dsn (str | None): A complete DSN, used instead of the parts.
         output_path (str): The directory for the Parquet files.
         batch_size_bytes (int, optional): How much the driver reads
             per batch, in bytes.
         row_group_size (int, optional): Maximum rows per Parquet row
             group.
     """
-    dsn = get_postgres_dsn(host=host, port=port, database=database)
+    dsn = build_dsn(dsn=dsn, host=host, port=port, database=database)
 
     validate_database_connection(dsn=dsn)
 
@@ -70,11 +74,12 @@ def export_database(
 @app.command()
 @handle_cli_errors
 def export_table(
-    host: Annotated[str, typer.Option("--host")],
-    port: Annotated[str, typer.Option("--port")],
-    database: Annotated[str, typer.Option("--database")],
     table: Annotated[str, typer.Option("--table")],
     output_path: Annotated[str, typer.Option("--folder")],
+    host: Annotated[str, typer.Option("--host")] = DEFAULT_HOST,
+    port: Annotated[int, typer.Option("--port")] = DEFAULT_PORT,
+    database: Annotated[str | None, typer.Option("--database")] = None,
+    dsn: Annotated[str | None, typer.Option("--dsn")] = None,
     output_file: str = "output.parquet",
     batch_size_bytes: int = DEFAULT_BATCH_SIZE_BYTES,
     row_group_size: int = DEFAULT_ROW_GROUP_SIZE,
@@ -84,8 +89,9 @@ def export_table(
 
     Args:
         host (str): The host of the PostgreSQL database.
-        port (str): The port of the PostgreSQL database.
-        database (str): The name of the PostgreSQL database.
+        port (int): The port of the PostgreSQL database.
+        database (str | None): The name of the PostgreSQL database.
+        dsn (str | None): A complete DSN, used instead of the parts.
         table (str): The name of the table to dump.
         output_path (str): The directory for the Parquet file.
         output_file (str, optional): The name of the output Parquet
@@ -95,7 +101,7 @@ def export_table(
         row_group_size (int, optional): Maximum rows per Parquet row
             group.
     """
-    dsn = get_postgres_dsn(host=host, port=port, database=database)
+    dsn = build_dsn(dsn=dsn, host=host, port=port, database=database)
 
     validate_database_connection(dsn=dsn)
 
@@ -117,11 +123,12 @@ def export_table(
 @app.command()
 @handle_cli_errors
 def export_query(
-    host: Annotated[str, typer.Option("--host")],
-    port: Annotated[str, typer.Option("--port")],
-    database: Annotated[str, typer.Option("--database")],
     query_file: Annotated[str, typer.Option("--query-file")],
     output_path: Annotated[str, typer.Option("--folder")],
+    host: Annotated[str, typer.Option("--host")] = DEFAULT_HOST,
+    port: Annotated[int, typer.Option("--port")] = DEFAULT_PORT,
+    database: Annotated[str | None, typer.Option("--database")] = None,
+    dsn: Annotated[str | None, typer.Option("--dsn")] = None,
     output_file: str = "custom-query.parquet",
     batch_size_bytes: int = DEFAULT_BATCH_SIZE_BYTES,
     row_group_size: int = DEFAULT_ROW_GROUP_SIZE,
@@ -131,8 +138,9 @@ def export_query(
 
     Args:
         host (str): The host of the PostgreSQL database.
-        port (str): The port of the PostgreSQL database.
-        database (str): The name of the PostgreSQL database.
+        port (int): The port of the PostgreSQL database.
+        database (str | None): The name of the PostgreSQL database.
+        dsn (str | None): A complete DSN, used instead of the parts.
         query_file (str): The path of the file with SQL query.
         output_path (str): The directory for the Parquet file.
         output_file (str, optional): The name of the output Parquet
@@ -142,7 +150,7 @@ def export_query(
         row_group_size (int, optional): Maximum rows per Parquet row
             group.
     """
-    dsn = get_postgres_dsn(host=host, port=port, database=database)
+    dsn = build_dsn(dsn=dsn, host=host, port=port, database=database)
 
     validate_database_connection(dsn=dsn)
     output_path = validate_output_path(output_path=output_path)

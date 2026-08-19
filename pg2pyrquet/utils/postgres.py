@@ -18,6 +18,7 @@ from psycopg import sql
 from pg2pyrquet.core.exceptions import (
     DatabaseConnectionError,
     InvalidPostgresCredentialsError,
+    MissingDatabaseError,
     TableDoesNotExistError,
 )
 from pg2pyrquet.core.logging import get_logger
@@ -59,13 +60,47 @@ def get_postgres_auth() -> str:
     return f"{quote_plus(user)}:{quote_plus(password)}"
 
 
-def get_postgres_dsn(host: str, port: str, database: str) -> str:
+def build_dsn(
+    dsn: str | None, host: str, port: int, database: str | None
+) -> str:
+    """
+    Returns the DSN to connect with.
+
+    An explicit DSN wins and is used untouched, so libpq parameters such
+    as sslmode keep working. Otherwise the parts are assembled, and the
+    database name is required.
+
+    Args:
+        dsn (str | None): A complete DSN, or None to assemble one.
+        host (str): The hostname of the PostgreSQL server.
+        port (int): The port number of the PostgreSQL server.
+        database (str | None): The name of the PostgreSQL database.
+
+    Returns:
+        str: The DSN to connect with.
+
+    Raises:
+        MissingDatabaseError: If no DSN and no database name were given.
+    """
+    if dsn:
+        return dsn
+
+    if not database:
+        raise MissingDatabaseError(
+            "Pass --database, or pass --dsn with a complete connection"
+            " string."
+        )
+
+    return get_postgres_dsn(host=host, port=port, database=database)
+
+
+def get_postgres_dsn(host: str, port: int, database: str) -> str:
     """
     Generates the DSN (Data Source Name) for the given database.
 
     Args:
         host (str): The hostname of the PostgreSQL server.
-        port (str): The port number of the PostgreSQL server.
+        port (int): The port number of the PostgreSQL server.
         database (str): The name of the PostgreSQL database.
 
     Returns:

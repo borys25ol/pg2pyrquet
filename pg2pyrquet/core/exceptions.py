@@ -50,3 +50,9 @@ class InvalidQueryError(Pg2ParquetError):
     """
     Raised when an invalid query is provided.
     """
+
+
+class MissingDatabaseError(Pg2ParquetError):
+    """
+    Raised when neither a database name nor a DSN was provided.
+    """
