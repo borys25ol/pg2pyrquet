@@ -7,10 +7,12 @@ from psycopg import OperationalError
 from pg2pyrquet.core.exceptions import (
     DatabaseConnectionError,
     InvalidPostgresCredentialsError,
+    MissingDatabaseError,
     TableDoesNotExistError,
 )
 from pg2pyrquet.utils.postgres import (
     SELECT_TABLES_QUERY,
+    build_dsn,
     check_table_exists,
     get_database_tables,
     get_default_query,
@@ -181,3 +183,25 @@ def test_get_default_query_uses_the_given_schema():
     query = get_default_query(table="events", schema="analytics")
 
     assert query == 'SELECT * FROM "analytics"."events";'
+
+
+def test_build_dsn_returns_an_explicit_dsn_untouched():
+    dsn = "postgresql://user@host:6432/db?sslmode=require"
+
+    result = build_dsn(dsn=dsn, host="ignored", port=1, database="ignored")
+
+    assert result == dsn
+
+
+@patch("pg2pyrquet.utils.postgres.get_postgres_auth", return_value="")
+def test_build_dsn_assembles_the_parts(mock_get_postgres_auth):
+    result = build_dsn(
+        dsn=None, host="localhost", port=5432, database="testdb"
+    )
+
+    assert result == "postgresql://@localhost:5432/testdb"
+
+
+def test_build_dsn_requires_a_database_without_a_dsn():
+    with pytest.raises(MissingDatabaseError):
+        build_dsn(dsn=None, host="localhost", port=5432, database=None)
