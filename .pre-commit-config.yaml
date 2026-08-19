@@ -1,5 +1,5 @@
 default_stages:
-  - commit
+  - pre-commit
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -8,42 +8,21 @@ repos:
       - id: end-of-file-fixer
       - id: trailing-whitespace
       - id: check-yaml
+      - id: check-toml
       - id: mixed-line-ending
       - id: check-case-conflict
-      - id: requirements-txt-fixer
 
-  - repo: https://github.com/pycqa/flake8
-    rev: 7.1.1
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.3
     hooks:
-      - id: flake8
-        additional_dependencies:
-          - wemake-python-styleguide
-          - flake8-builtins
-          - flake8-annotations-complexity
-          - flake8-class-attributes-order
-          - flake8-cognitive-complexity
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
 
   - repo: local
     hooks:
       - id: mypy
         name: mypy
         pass_filenames: false
-        language: python
-        entry: bash -c 'make types'
-
-  - repo: https://github.com/psf/black
-    rev: 24.8.0
-    hooks:
-      - id: black
-        language_version: python
-
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.17.0
-    hooks:
-      - id: pyupgrade
-        args: [--py310-plus]
+        language: system
+        entry: make types

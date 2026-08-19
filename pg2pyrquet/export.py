@@ -40,30 +40,25 @@ def export_to_parquet(
         batch_size_bytes (int): How much the driver reads per batch.
         row_group_size (int): Maximum rows per Parquet row group.
     """
-    with connect(uri=dsn) as conn:
-        with conn.cursor() as cur:
-            cur.adbc_statement.set_options(
-                **{
-                    StatementOptions.BATCH_SIZE_HINT_BYTES.value: str(
-                        batch_size_bytes
-                    )
-                }
-            )
-            logger.info("Connected to DB, starting to execute query...")
-            cur.execute(query)
-            logger.info("Query executed...")
+    with connect(uri=dsn) as conn, conn.cursor() as cur:
+        cur.adbc_statement.set_options(
+            **{
+                StatementOptions.BATCH_SIZE_HINT_BYTES.value: str(
+                    batch_size_bytes
+                )
+            }
+        )
+        logger.info("Connected to DB, starting to execute query...")
+        cur.execute(query)
+        logger.info("Query executed...")
 
-            reader = cur.fetch_record_batch()
+        reader = cur.fetch_record_batch()
 
-            with ParquetWriter(
-                where=output_file, schema=reader.schema
-            ) as writer:
-                for number, batch in enumerate(reader, start=1):
-                    logger.info(
-                        f"Writing batch {number} to the file: {output_file}"
-                    )
-                    writer.write_batch(
-                        batch=batch, row_group_size=row_group_size
-                    )
+        with ParquetWriter(where=output_file, schema=reader.schema) as writer:
+            for number, batch in enumerate(reader, start=1):
+                logger.info(
+                    f"Writing batch {number} to the file: {output_file}"
+                )
+                writer.write_batch(batch=batch, row_group_size=row_group_size)
 
     logger.info("Export finished successfully.")

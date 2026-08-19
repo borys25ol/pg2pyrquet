@@ -6,7 +6,7 @@ class DirectoryDoesNotExistError(Exception):
 
 class DirectoryIsAFileError(Exception):
     """
-    Raised when a specified path is expected to be a directory but is actually a file.
+    Raised when a path should be a directory but is a file.
     """
 
 
@@ -36,7 +36,7 @@ class QueryFileDoesNotExistError(Exception):
 
 class QueryFileIsADirectoryError(Exception):
     """
-    Raised when a specified path is expected to be a file but is actually a directory.
+    Raised when a path should be a file but is a directory.
     """
 
 
