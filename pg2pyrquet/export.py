@@ -1,97 +1,59 @@
-from collections import defaultdict
 from pathlib import Path
 
-import psycopg
-import pyarrow as pa
-from psycopg.rows import dict_row
+from adbc_driver_postgresql import StatementOptions
+from adbc_driver_postgresql.dbapi import connect
 from pyarrow.parquet import ParquetWriter
 
 from pg2pyrquet.core.logging import get_logger
-from pg2pyrquet.utils.parquet import write_batch_to_parquet
-from pg2pyrquet.utils.postgres import get_query_data_types
 
 logger = get_logger(name=__name__)
 
 
-def reset_column_values(
-    fields_types: dict[str, pa.DataType], records: dict[str, list]
-) -> None:
-    """
-    Resets the values list for each column in the records dictionary based on the fields_types.
-
-    Args:
-        fields_types (dict[str, pa.DataType]): The dictionary of field names and their data types.
-        records (dict[str, list]): The dictionary to reset, where keys are field names.
-    """
-    for field in fields_types:
-        records[field] = []
-
-
 def export_to_parquet(
-    dsn: str, output_file: Path, batch_size: int, query: str
+    dsn: str,
+    output_file: Path,
+    query: str,
+    batch_size_bytes: int,
+    row_group_size: int,
 ) -> None:
     """
-    Processes export the specified table from the database to a Parquet file.
+    Streams the query result into a Parquet file.
+
+    The driver returns Arrow batches directly, so no value is turned into
+    a Python object on the way. The reader carries the schema, so the
+    query runs once.
 
     Args:
-        dsn (str): The Data Source Name for connecting to the PostgreSQL database.
+        dsn (str): The Data Source Name for the PostgreSQL database.
         output_file (Path): The path to the output Parquet file.
-        batch_size (int): The number of rows to process in each batch.
         query (str): SQL query to execute.
+        batch_size_bytes (int): How much the driver reads per batch.
+        row_group_size (int): Maximum rows per Parquet row group.
     """
-    records = defaultdict(list)
-
-    data_types = get_query_data_types(dsn=dsn, query=query)
-    schema = pa.schema(fields=data_types)
-
-    with ParquetWriter(where=output_file, schema=schema) as writer:
-        with psycopg.connect(dsn) as conn:
+    with connect(uri=dsn) as conn:
+        with conn.cursor() as cur:
+            cur.adbc_statement.set_options(
+                **{
+                    StatementOptions.BATCH_SIZE_HINT_BYTES.value: str(
+                        batch_size_bytes
+                    )
+                }
+            )
             logger.info("Connected to DB, starting to execute query...")
+            cur.execute(query)
+            logger.info("Query executed...")
 
-            with conn.cursor(
-                name="pg-to-parquet", row_factory=dict_row
-            ) as cur:
-                cur.itersize = batch_size
-                cur.execute(query)
-                logger.info("Query executed...")
+            reader = cur.fetch_record_batch()
 
-                buffered_rows = 0
-                batch_number = 0
-
-                for record in cur:
-                    for column, value in record.items():
-                        records[column].append(value)
-
-                    buffered_rows += 1
-
-                    if buffered_rows < batch_size:
-                        continue
-
-                    batch_number += 1
+            with ParquetWriter(
+                where=output_file, schema=reader.schema
+            ) as writer:
+                for number, batch in enumerate(reader, start=1):
                     logger.info(
-                        f"Writing batch {batch_number} to the file: {output_file}"
+                        f"Writing batch {number} to the file: {output_file}"
                     )
-                    write_batch_to_parquet(
-                        writer=writer,
-                        fields_types=data_types,
-                        data=records,
-                        schema=schema,
-                    )
-                    reset_column_values(
-                        fields_types=data_types, records=records
-                    )
-                    buffered_rows = 0
-
-                if buffered_rows:
-                    batch_number += 1
-                    logger.info(
-                        f"Writing batch {batch_number} to the file: {output_file}"
-                    )
-                    write_batch_to_parquet(
-                        writer=writer,
-                        fields_types=data_types,
-                        data=records,
-                        schema=schema,
+                    writer.write_batch(
+                        batch=batch, row_group_size=row_group_size
                     )
 
-                logger.info("Export finished successfully.")
+    logger.info("Export finished successfully.")
