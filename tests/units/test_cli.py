@@ -63,3 +63,24 @@ def test_database_is_required_without_a_dsn(caplog):
 
     assert result.exit_code == 1
     assert "--database" in caplog.text
+
+
+@pytest.mark.parametrize("command", ["export-database", "export-table"])
+def test_schema_option_is_offered(command):
+    assert "--schema" in render_help(command)
+
+
+@pytest.mark.parametrize("command", COMMANDS)
+def test_overwrite_option_is_offered(command):
+    assert "--overwrite" in render_help(command)
+
+
+def test_continue_on_error_is_offered_for_the_database_command():
+    assert "--continue-on-error" in render_help("export-database")
+
+
+def test_version_is_printed():
+    result = runner.invoke(app, ["--version"])
+
+    assert result.exit_code == 0
+    assert "0.2.0" in ANSI_ESCAPE_PATTERN.sub("", result.output)

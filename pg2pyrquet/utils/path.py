@@ -3,6 +3,7 @@ from pathlib import Path
 from pg2pyrquet.core.exceptions import (
     DirectoryDoesNotExistError,
     DirectoryIsAFileError,
+    OutputFileExistsError,
     QueryFileDoesNotExistError,
     QueryFileIsADirectoryError,
 )
@@ -64,3 +65,26 @@ def validate_query_path(query_path: str | Path) -> Path:
         )
 
     return query_path
+
+
+def validate_output_file(output_file: Path, overwrite: bool) -> Path:
+    """
+    Refuses to replace an existing file unless overwriting was asked for.
+
+    Args:
+        output_file (Path): The file the export would write.
+        overwrite (bool): Whether replacing an existing file is allowed.
+
+    Returns:
+        Path: The validated output file.
+
+    Raises:
+        OutputFileExistsError: If the file exists and overwrite is False.
+    """
+    if output_file.exists() and not overwrite:
+        raise OutputFileExistsError(
+            f"Output file '{output_file}' already exists."
+            " Pass --overwrite to replace it."
+        )
+
+    return output_file

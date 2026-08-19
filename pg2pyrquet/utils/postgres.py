@@ -25,14 +25,17 @@ from pg2pyrquet.core.logging import get_logger
 
 logger = get_logger(name=__name__)
 
+# Default schema searched for tables
+DEFAULT_SCHEMA = "public"
+
 # Query to select all rows from a specified table
-SELECT_ALL_TABLE_QUERY = "SELECT * FROM {table_name};"
+SELECT_ALL_TABLE_QUERY = "SELECT * FROM {schema}.{table_name};"
 
 # Query to list all tables in the 'public' schema of the current database
 SELECT_TABLES_QUERY = """
     SELECT table_name
     FROM information_schema.tables
-    WHERE table_schema = 'public';
+    WHERE table_schema = %s;
 """
 
 
@@ -110,23 +113,24 @@ def get_postgres_dsn(host: str, port: int, database: str) -> str:
     return f"postgresql://{auth}@{host}:{port}/{database}"
 
 
-def get_default_query(table: str) -> str:
+def get_default_query(table: str, schema: str = DEFAULT_SCHEMA) -> str:
     """
-    Generates the default query to select all rows from the specified table.
+    Generates the query selecting every row of the given table.
 
     Args:
         table (str): The name of the table to query.
+        schema (str): The schema holding the table.
 
     Returns:
-        str: The default query to select all rows from the table.
+        str: The query selecting every row of the table.
     """
     query = sql.SQL(SELECT_ALL_TABLE_QUERY).format(
-        table_name=sql.Identifier(table)
+        schema=sql.Identifier(schema), table_name=sql.Identifier(table)
     )
     return query.as_string()
 
 
-def get_database_tables(dsn: str) -> list[str]:
+def get_database_tables(dsn: str, schema: str = DEFAULT_SCHEMA) -> list[str]:
     """
     Retrieves the list of all tables in the specified database.
 
@@ -137,11 +141,13 @@ def get_database_tables(dsn: str) -> list[str]:
         list[str]: A list of table names.
     """
     with psycopg.connect(dsn) as conn, conn.cursor() as cur:
-        cur.execute(SELECT_TABLES_QUERY)
+        cur.execute(SELECT_TABLES_QUERY, (schema,))
         return [table_name for (table_name,) in cur.fetchall()]
 
 
-def check_table_exists(dsn: str, table: str) -> bool:
+def check_table_exists(
+    dsn: str, table: str, schema: str = DEFAULT_SCHEMA
+) -> bool:
     """
     Checks if a table with the specified name exists in the given database.
 
@@ -152,7 +158,7 @@ def check_table_exists(dsn: str, table: str) -> bool:
     Returns:
         bool: True if the table exists, False otherwise.
     """
-    return table in get_database_tables(dsn=dsn)
+    return table in get_database_tables(dsn=dsn, schema=schema)
 
 
 def validate_database_connection(dsn: str) -> str:
@@ -182,7 +188,9 @@ def validate_database_connection(dsn: str) -> str:
         ) from error
 
 
-def validate_table_exists(dsn: str, table: str) -> str:
+def validate_table_exists(
+    dsn: str, table: str, schema: str = DEFAULT_SCHEMA
+) -> str:
     """
     Validates that the specified table exists within the given database.
 
@@ -196,8 +204,8 @@ def validate_table_exists(dsn: str, table: str) -> str:
     Raises:
         TableDoesNotExistError: If the table does not exist.
     """
-    if not check_table_exists(dsn=dsn, table=table):
+    if not check_table_exists(dsn=dsn, table=table, schema=schema):
         raise TableDoesNotExistError(
-            f"Table '{table}' does not exist in database."
+            f"Table '{table}' does not exist in schema '{schema}'."
         )
     return table

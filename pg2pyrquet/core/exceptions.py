@@ -56,3 +56,15 @@ class MissingDatabaseError(Pg2ParquetError):
     """
     Raised when neither a database name nor a DSN was provided.
     """
+
+
+class OutputFileExistsError(Pg2ParquetError):
+    """
+    Raised when the output file exists and overwriting was not allowed.
+    """
+
+
+class ExportFailedError(Pg2ParquetError):
+    """
+    Raised when one or more tables failed to export.
+    """

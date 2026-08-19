@@ -5,10 +5,15 @@ import pytest
 from pg2pyrquet.core.exceptions import (
     DirectoryDoesNotExistError,
     DirectoryIsAFileError,
+    OutputFileExistsError,
     QueryFileDoesNotExistError,
     QueryFileIsADirectoryError,
 )
-from pg2pyrquet.utils.path import validate_output_path, validate_query_path
+from pg2pyrquet.utils.path import (
+    validate_output_file,
+    validate_output_path,
+    validate_query_path,
+)
 
 
 def test_validate_output_path_existing_directory():
@@ -61,3 +66,24 @@ def test_directory_does_not_exist_error():
 def test_directory_is_a_file_error():
     with pytest.raises(DirectoryIsAFileError):
         raise DirectoryIsAFileError("Test error")
+
+
+def test_validate_output_file_allows_a_new_file(tmp_path):
+    output_file = tmp_path / "new.parquet"
+
+    assert validate_output_file(output_file, overwrite=False) == output_file
+
+
+def test_validate_output_file_refuses_to_replace_silently(tmp_path):
+    output_file = tmp_path / "existing.parquet"
+    output_file.touch()
+
+    with pytest.raises(OutputFileExistsError):
+        validate_output_file(output_file, overwrite=False)
+
+
+def test_validate_output_file_replaces_when_asked(tmp_path):
+    output_file = tmp_path / "existing.parquet"
+    output_file.touch()
+
+    assert validate_output_file(output_file, overwrite=True) == output_file

@@ -57,19 +57,19 @@ def test_get_postgres_dsn(mock_get_postgres_auth):
 
 def test_get_default_query_valid_table():
     table = "test_table"
-    expected = 'SELECT * FROM "test_table";'
+    expected = 'SELECT * FROM "public"."test_table";'
     assert get_default_query(table=table) == expected
 
 
 def test_get_default_query_quotes_mixed_case_table():
     table = "MyTable"
-    expected = 'SELECT * FROM "MyTable";'
+    expected = 'SELECT * FROM "public"."MyTable";'
     assert get_default_query(table=table) == expected
 
 
 def test_get_default_query_escapes_embedded_quote():
     table = 'evil"; DROP TABLE users; --'
-    expected = 'SELECT * FROM "evil""; DROP TABLE users; --";'
+    expected = 'SELECT * FROM "public"."evil""; DROP TABLE users; --";'
     assert get_default_query(table=table) == expected
 
 
@@ -84,7 +84,9 @@ def test_get_database_tables_with_tables(mock_connect):
     result = get_database_tables(dsn)
     expected = ["table1", "table2"]
     assert result == expected
-    mock_cursor.execute.assert_called_once_with(SELECT_TABLES_QUERY)
+    mock_cursor.execute.assert_called_once_with(
+        SELECT_TABLES_QUERY, ("public",)
+    )
 
 
 @patch("pg2pyrquet.utils.postgres.psycopg.connect")
@@ -98,7 +100,9 @@ def test_get_database_tables_without_tables(mock_connect):
     result = get_database_tables(dsn)
     expected = []
     assert result == expected
-    mock_cursor.execute.assert_called_once_with(SELECT_TABLES_QUERY)
+    mock_cursor.execute.assert_called_once_with(
+        SELECT_TABLES_QUERY, ("public",)
+    )
 
 
 @patch(
@@ -109,7 +113,7 @@ def test_check_table_exists(mock_get_database_tables):
     dsn = "test_dsn"
     table = "test_table"
     assert check_table_exists(dsn, table) is True
-    mock_get_database_tables.assert_called_once_with(dsn=dsn)
+    mock_get_database_tables.assert_called_once_with(dsn=dsn, schema="public")
 
 
 @patch(
@@ -120,7 +124,7 @@ def test_check_table_does_not_exist(mock_get_database_tables):
     dsn = "test_dsn"
     table = "test_table"
     assert check_table_exists(dsn, table) is False
-    mock_get_database_tables.assert_called_once_with(dsn=dsn)
+    mock_get_database_tables.assert_called_once_with(dsn=dsn, schema="public")
 
 
 @patch("pg2pyrquet.utils.postgres.check_table_exists", return_value=True)
@@ -128,7 +132,9 @@ def test_validate_table_exists(mock_check_table_exists):
     dsn = "test_dsn"
     table = "test_table"
     assert validate_table_exists(dsn, table) == table
-    mock_check_table_exists.assert_called_once_with(dsn=dsn, table=table)
+    mock_check_table_exists.assert_called_once_with(
+        dsn=dsn, table=table, schema="public"
+    )
 
 
 @patch("pg2pyrquet.utils.postgres.check_table_exists", return_value=False)
@@ -137,7 +143,9 @@ def test_validate_table_does_not_exist(mock_check_table_exists):
     table = "test_table"
     with pytest.raises(TableDoesNotExistError):
         validate_table_exists(dsn, table)
-    mock_check_table_exists.assert_called_once_with(dsn=dsn, table=table)
+    mock_check_table_exists.assert_called_once_with(
+        dsn=dsn, table=table, schema="public"
+    )
 
 
 @patch.dict(
@@ -167,3 +175,9 @@ def test_validate_connection_returns_the_dsn(mock_connect):
 
     assert validate_database_connection(dsn=dsn) == dsn
     mock_connect.return_value.__exit__.assert_called_once()
+
+
+def test_get_default_query_uses_the_given_schema():
+    query = get_default_query(table="events", schema="analytics")
+
+    assert query == 'SELECT * FROM "analytics"."events";'
