@@ -5,6 +5,50 @@ import pyarrow as pa
 
 from pg2pyrquet.export import export_to_parquet, reset_column_values
 
+DATA_TYPES = {"field1": pa.int32(), "field2": pa.string()}
+
+
+def build_rows(count: int) -> list[dict]:
+    """
+    Builds a list of fake database records matching DATA_TYPES.
+    """
+    return [
+        {"field1": index, "field2": f"value-{index}"}
+        for index in range(count)
+    ]
+
+
+def run_export(rows: list[dict], batch_size: int) -> list[int]:
+    """
+    Runs the export against a fake cursor and returns written batch sizes.
+    """
+    writer = MagicMock()
+    cursor = MagicMock()
+    cursor.__iter__.return_value = iter(rows)
+
+    with (
+        patch("pg2pyrquet.export.ParquetWriter") as writer_class,
+        patch(
+            "pg2pyrquet.export.get_query_data_types", return_value=DATA_TYPES
+        ),
+        patch("pg2pyrquet.export.psycopg.connect") as connect,
+    ):
+        writer_class.return_value.__enter__.return_value = writer
+        connection = connect.return_value.__enter__.return_value
+        connection.cursor.return_value.__enter__.return_value = cursor
+
+        export_to_parquet(
+            dsn="dsn",
+            output_file=Path("./data/pytest.parquet"),
+            batch_size=batch_size,
+            query="SELECT * FROM test_table",
+        )
+
+    return [
+        call.kwargs["batch"].num_rows
+        for call in writer.write_batch.call_args_list
+    ]
+
 
 def test_reset_column_values():
     fields_types = {"field1": pa.int32(), "field2": pa.string()}
@@ -13,45 +57,17 @@ def test_reset_column_values():
     assert records == {"field1": [], "field2": []}
 
 
-@patch("pg2pyrquet.export.ParquetWriter")
-@patch("pg2pyrquet.export.reset_column_values")
-@patch("pg2pyrquet.export.write_batch_to_parquet")
-@patch(
-    "pg2pyrquet.export.get_query_data_types",
-    return_value={"field1": pa.int32(), "field2": pa.string()},
-)
-@patch("pg2pyrquet.export.psycopg.connect")
-def test_export_to_parquet(
-    mock_psycopg_connect,
-    mock_reset_column_values,
-    mock_get_query_data_types,
-    mock_write_batch_to_parquet,
-    mock_parquet_writer,
-):
-    mock_writer = MagicMock()
-    mock_parquet_writer.return_value.__enter__.return_value = mock_writer
+def test_export_writes_full_batches():
+    assert run_export(rows=build_rows(count=4), batch_size=2) == [2, 2]
 
-    mock_cursor = MagicMock()
-    mock_cursor.__iter__.return_value = [
-        {"field1": 1, "field2": "a"},
-        {"field1": 2, "field2": "b"},
-    ]
-    mock_cursor.itersize = 1
-    mock_psycopg_connect.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value = (
-        mock_cursor
-    )
 
-    dsn = "dsn"
-    query = "SELECT * FROM test_table"
-    output_file = Path("./data/pytest.parquet")
-    batch_size = 1
+def test_export_writes_remainder_as_last_batch():
+    assert run_export(rows=build_rows(count=3), batch_size=2) == [2, 1]
 
-    export_to_parquet(
-        dsn=dsn, output_file=output_file, batch_size=batch_size, query=query
-    )
 
-    # Check if the writer was called to write batches
-    mock_write_batch_to_parquet.assert_called()
-    assert mock_write_batch_to_parquet.call_count == 2
-    # Check if reset_column_values was called
-    mock_reset_column_values.assert_called()
+def test_export_writes_single_batch_when_rows_fit():
+    assert run_export(rows=build_rows(count=2), batch_size=10) == [2]
+
+
+def test_export_writes_nothing_for_empty_result():
+    assert run_export(rows=[], batch_size=2) == []

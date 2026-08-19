@@ -1,9 +1,9 @@
 import os
-import re
-from urllib.parse import urlparse
+from urllib.parse import quote_plus, urlparse
 
 import psycopg
 from adbc_driver_postgresql.dbapi import connect as adbc_connect
+from psycopg import sql
 from pyarrow import DataType
 
 from pg2pyrquet.core.exceptions import (
@@ -17,6 +17,9 @@ logger = get_logger(name=__name__)
 
 # Query to select all rows from a specified table
 SELECT_ALL_TABLE_QUERY = "SELECT * FROM {table_name};"
+
+# Query wrapper used to read the result schema without fetching the data
+SCHEMA_PROBE_QUERY = "SELECT * FROM ({query}) AS _schema_probe LIMIT 1;"
 
 # Query to list all databases in the PostgreSQL instance
 SELECT_DATABASES_QUERY = "SELECT datname FROM pg_database;"
@@ -42,13 +45,15 @@ def get_postgres_auth() -> str:
     user = os.getenv("POSTGRES_USER")
     password = os.getenv("POSTGRES_PASSWORD")
 
-    if user:
-        if password:
-            return f"{user}:{password}"
+    if not user:
+        return ""
+
+    if not password:
         raise InvalidPostgresCredentialsError(
             "POSTGRES_PASSWORD environment variable is not set."
         )
-    return ""
+
+    return f"{quote_plus(user)}:{quote_plus(password)}"
 
 
 def get_postgres_dsn(host: str, port: str, database: str) -> str:
@@ -77,7 +82,10 @@ def get_default_query(table: str) -> str:
     Returns:
         str: The default query to select all rows from the table.
     """
-    return SELECT_ALL_TABLE_QUERY.format(table_name=table)
+    query = sql.SQL(SELECT_ALL_TABLE_QUERY).format(
+        table_name=sql.Identifier(table)
+    )
+    return query.as_string()
 
 
 def get_query_data_types(dsn: str, query: str) -> dict[str, DataType]:
@@ -91,10 +99,10 @@ def get_query_data_types(dsn: str, query: str) -> dict[str, DataType]:
     Returns:
         dict[str, DataType]: A dictionary mapping column names to their data types.
     """
-    query_with_limit = format_query_with_limit(query=query)
+    probe_query = build_schema_probe_query(query=query)
     with adbc_connect(uri=dsn) as conn:
         with conn.cursor() as cur:
-            cur.execute(query_with_limit)
+            cur.execute(probe_query)
             return {column[0]: column[1] for column in cur.description}
 
 
@@ -109,11 +117,11 @@ def check_db_exists(dsn: str) -> bool:
         bool: True if the database exists, False otherwise.
     """
     try:
-        psycopg.connect(dsn)
+        with psycopg.connect(dsn):
+            return True
     except psycopg.OperationalError as e:
         logger.error(f"Error connecting to database: {e}")
         return False
-    return True
 
 
 def get_database_tables(dsn: str) -> list[str]:
@@ -189,23 +197,19 @@ def validate_table_exists(dsn: str, table: str) -> str:
     return table
 
 
-def format_query_with_limit(query: str) -> str:
+def build_schema_probe_query(query: str) -> str:
     """
-    Format the specific query.
+    Wraps the query into a subquery that returns at most one row.
 
-    Add a LIMIT 1 clause if the query does not already contain a LIMIT clause.
-
-    Change the LIMIT clause to LIMIT 1 if the query already contains a LIMIT clause.
+    The wrapper lets the driver report the result schema without fetching
+    the whole result set. It keeps the original query untouched, so table
+    names, string literals and nested LIMIT clauses stay intact.
 
     Args:
-        query (str): The query to format.
+        query (str): The query to wrap.
 
     Returns:
-        str: The formatted query with LIMIT 1 clause.
+        str: The wrapped query.
     """
-    query = query.replace(";", "")
-
-    if "limit" not in query.lower():
-        return f"{query} LIMIT 1;"
-
-    return re.sub(r"(?i)limit\s+\d+", "LIMIT 1;", string=query)
+    inner_query = query.strip().rstrip(";").strip()
+    return SCHEMA_PROBE_QUERY.format(query=inner_query)
