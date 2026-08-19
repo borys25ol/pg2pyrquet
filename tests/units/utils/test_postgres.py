@@ -12,14 +12,12 @@ from pg2pyrquet.core.exceptions import (
 )
 from pg2pyrquet.utils.postgres import (
     SELECT_TABLES_QUERY,
-    build_schema_probe_query,
     check_db_exists,
     check_table_exists,
     get_database_tables,
     get_default_query,
     get_postgres_auth,
     get_postgres_dsn,
-    get_query_data_types,
     validate_database_connection,
     validate_table_exists,
 )
@@ -91,85 +89,6 @@ def test_get_default_query_escapes_embedded_quote():
     table = 'evil"; DROP TABLE users; --'
     expected = 'SELECT * FROM "evil""; DROP TABLE users; --";'
     assert get_default_query(table=table) == expected
-
-
-@patch("pg2pyrquet.utils.postgres.adbc_connect")
-@patch(
-    "pg2pyrquet.utils.postgres.build_schema_probe_query",
-    return_value="SELECT * FROM test_table LIMIT 1;",
-)
-def test_get_query_data_types(
-    mock_build_schema_probe_query, mock_adbc_connect
-):
-    mock_cursor = MagicMock()
-    mock_cursor.description = [
-        ("field1", pa.int32()),
-        ("field2", pa.string()),
-    ]
-    mock_adbc_connect.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value = (
-        mock_cursor
-    )
-
-    dsn = "test_dsn"
-    query = "SELECT * FROM test_table"
-    result = get_query_data_types(dsn, query)
-    expected = {"field1": pa.int32(), "field2": pa.string()}
-    assert result == expected
-    mock_build_schema_probe_query.assert_called_once_with(query=query)
-    mock_cursor.execute.assert_called_once_with(
-        "SELECT * FROM test_table LIMIT 1;"
-    )
-
-
-@patch("pg2pyrquet.utils.postgres.adbc_connect")
-@patch(
-    "pg2pyrquet.utils.postgres.build_schema_probe_query",
-    return_value=" LIMIT 1;",
-)
-def test_get_query_data_types_empty_query(
-    mock_build_schema_probe_query, mock_adbc_connect
-):
-    mock_cursor = MagicMock()
-    mock_cursor.description = []
-    mock_adbc_connect.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value = (
-        mock_cursor
-    )
-
-    dsn = "test_dsn"
-    query = ""
-    result = get_query_data_types(dsn, query)
-    expected = {}
-    assert result == expected
-    mock_build_schema_probe_query.assert_called_once_with(query=query)
-    mock_cursor.execute.assert_called_once_with(" LIMIT 1;")
-
-
-@patch("pg2pyrquet.utils.postgres.adbc_connect")
-@patch(
-    "pg2pyrquet.utils.postgres.build_schema_probe_query",
-    return_value="SELECT * FROM test_table LIMIT 1;",
-)
-def test_get_query_data_types_with_limit(
-    mock_build_schema_probe_query, mock_adbc_connect
-):
-    mock_cursor = MagicMock()
-    mock_cursor.description = [
-        ("field1", pa.int32()),
-        ("field2", pa.string()),
-    ]
-    mock_adbc_connect.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value = (
-        mock_cursor
-    )
-
-    dsn = "test_dsn"
-    query = "SELECT * FROM test_table LIMIT 10"
-    result = get_query_data_types(dsn, query)
-    expected = {"field1": pa.int32(), "field2": pa.string()}
-    assert result == expected
-    mock_build_schema_probe_query.assert_called_once_with(query=query)
-    mock_cursor.execute.assert_called_once_with(
-        "SELECT * FROM test_table LIMIT 1;"
-    )
 
 
 @patch("pg2pyrquet.utils.postgres.psycopg.connect")
@@ -254,58 +173,6 @@ def test_validate_table_does_not_exist(mock_check_table_exists):
     with pytest.raises(TableDoesNotExistError):
         validate_table_exists(dsn, table)
     mock_check_table_exists.assert_called_once_with(dsn=dsn, table=table)
-
-
-def test_build_schema_probe_query_wraps_query():
-    query = "SELECT * FROM test_table"
-    expected = (
-        "SELECT * FROM (SELECT * FROM test_table) AS _schema_probe LIMIT 1;"
-    )
-    assert build_schema_probe_query(query=query) == expected
-
-
-def test_build_schema_probe_query_strips_trailing_semicolon():
-    query = "SELECT * FROM test_table;"
-    expected = (
-        "SELECT * FROM (SELECT * FROM test_table) AS _schema_probe LIMIT 1;"
-    )
-    assert build_schema_probe_query(query=query) == expected
-
-
-def test_build_schema_probe_query_keeps_table_name_containing_limit():
-    query = "SELECT * FROM delimiter_table"
-    expected = (
-        "SELECT * FROM (SELECT * FROM delimiter_table)"
-        " AS _schema_probe LIMIT 1;"
-    )
-    assert build_schema_probe_query(query=query) == expected
-
-
-def test_build_schema_probe_query_keeps_string_literal_untouched():
-    query = "SELECT * FROM test_table WHERE name = 'no limit here'"
-    expected = (
-        "SELECT * FROM (SELECT * FROM test_table"
-        " WHERE name = 'no limit here') AS _schema_probe LIMIT 1;"
-    )
-    assert build_schema_probe_query(query=query) == expected
-
-
-def test_build_schema_probe_query_keeps_limit_offset_clause():
-    query = "SELECT * FROM test_table ORDER BY id LIMIT 50 OFFSET 10;"
-    expected = (
-        "SELECT * FROM (SELECT * FROM test_table ORDER BY id"
-        " LIMIT 50 OFFSET 10) AS _schema_probe LIMIT 1;"
-    )
-    assert build_schema_probe_query(query=query) == expected
-
-
-def test_build_schema_probe_query_keeps_nested_limit():
-    query = "SELECT a, (SELECT b FROM c LIMIT 5) FROM test_table"
-    expected = (
-        "SELECT * FROM (SELECT a, (SELECT b FROM c LIMIT 5)"
-        " FROM test_table) AS _schema_probe LIMIT 1;"
-    )
-    assert build_schema_probe_query(query=query) == expected
 
 
 @patch.dict(

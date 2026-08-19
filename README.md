@@ -36,6 +36,23 @@ To use `pg2pyrquet`, you need to have Python installed. You can install the nece
 pip install -r requirements.txt
 ```
 
+## Running the Tests
+
+Unit tests need nothing but the dev requirements:
+
+```shell
+make test
+```
+
+Integration tests need a Postgres. Start one with Docker Compose:
+
+```shell
+docker compose up -d
+make test-integration
+```
+
+They skip themselves when no database is reachable.
+
 Configuration
 --------------
 
@@ -76,7 +93,8 @@ python -m pg2pyrquet export-table \
     --table <table_name> \
     --folder <output_folder> \
     --output-file <output_filename> \
-    --batch-size <batch_size>
+    --batch-size-bytes <bytes> \
+    --row-group-size <rows>
 ```
 
 #### Command Options
@@ -86,7 +104,8 @@ python -m pg2pyrquet export-table \
 - `--table`: The specific table within the database to export.
 - `--folder`: The directory where the Parquet file will be saved.
 - `--output-file`: The name of the output Parquet file.
-- `--batch-size`: The number of rows to process in each batch. This helps in managing memory usage for large tables.
+- `--batch-size-bytes`: How much the driver reads per batch, in bytes. Defaults to 16 MiB.
+- `--row-group-size`: Maximum rows per Parquet row group. Defaults to 1048576.
 
 ### Export All Database Tables
 
@@ -101,7 +120,8 @@ python -m pg2pyrquet export-database \
     --port <port> \
     --database <database_name> \
     --folder <output_folder> \
-    --batch-size <batch_size>
+    --batch-size-bytes <bytes> \
+    --row-group-size <rows>
 ```
 
 #### Command Options
@@ -110,7 +130,8 @@ python -m pg2pyrquet export-database \
 - `--port`: The port number of the PostgreSQL server.
 - `--database`: The name of the PostgreSQL database you want to export data from.
 - `--folder`: The directory where the Parquet file will be saved.
-- `--batch-size`: The number of rows to process in each batch. This helps in managing memory usage for large tables.
+- `--batch-size-bytes`: How much the driver reads per batch, in bytes. Defaults to 16 MiB.
+- `--row-group-size`: Maximum rows per Parquet row group. Defaults to 1048576.
 
 
 #### Note on File Naming
@@ -132,7 +153,8 @@ python -m pg2pyrquet export-query \
     --query-file <query_file_path> \
     --folder <output_folder> \
     --output-file <output_filename> \
-    --batch-size <batch_size>
+    --batch-size-bytes <bytes> \
+    --row-group-size <rows>
 ```
 
 #### Command Options
@@ -143,7 +165,8 @@ python -m pg2pyrquet export-query \
 - `--query-file`: The path to the file containing the SQL query (like `custom-query.sql`).
 - `--folder`: The directory where the Parquet file will be saved.
 - `--output-file`: The name of the output Parquet file.
-- `--batch-size`: The number of rows to process in each batch. This helps in managing memory usage for large tables.
+- `--batch-size-bytes`: How much the driver reads per batch, in bytes. Defaults to 16 MiB.
+- `--row-group-size`: Maximum rows per Parquet row group. Defaults to 1048576.
 
 Example SQL query file (`custom-query.sql`):
 
@@ -185,7 +208,7 @@ def run_export_database() -> None:
         port="5432",
         database="test_database",
         output_path="./data",
-        batch_size=5000,
+        batch_size_bytes=16 * 1024 * 1024,
     )
 
 
@@ -197,7 +220,7 @@ def run_export_table() -> None:
         table="test_table",
         output_path="./data",
         output_file="test_table.parquet",
-        batch_size=5000,
+        batch_size_bytes=16 * 1024 * 1024,
     )
 
 
@@ -209,7 +232,7 @@ def run_export_query() -> None:
         query_file="./custom_query.sql",
         output_path="./data",
         output_file="query.parquet",
-        batch_size=5000,
+        batch_size_bytes=16 * 1024 * 1024,
     )
 
 
@@ -233,6 +256,21 @@ And run it:
 ```shell
 python export.py
 ```
+
+## Exported Types
+
+| Postgres | Parquet |
+| --- | --- |
+| `int` | `int32` |
+| `text` | `string` |
+| `numeric` | string extension, exact digits preserved |
+| `timestamptz` | `timestamp[us, tz=UTC]` |
+| `jsonb` | `arrow.json` extension |
+| `uuid` | 16-byte binary extension |
+| `text[]` | `list<string>` |
+
+`numeric` is stored as text so no digit is lost. Cast it before doing
+arithmetic on it.
 
 Contributing
 ------------

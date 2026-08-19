@@ -1,10 +1,19 @@
+"""
+Postgres metadata access.
+
+This module owns the metadata path: building a DSN, listing tables,
+checking that a database answers, and quoting identifiers. It runs on
+psycopg.
+
+The data path lives in `pg2pyrquet.export` and runs on ADBC, which
+returns Arrow batches directly.
+"""
+
 import os
 from urllib.parse import quote_plus, urlparse
 
 import psycopg
-from adbc_driver_postgresql.dbapi import connect as adbc_connect
 from psycopg import sql
-from pyarrow import DataType
 
 from pg2pyrquet.core.exceptions import (
     DatabaseConnectionError,
@@ -17,12 +26,6 @@ logger = get_logger(name=__name__)
 
 # Query to select all rows from a specified table
 SELECT_ALL_TABLE_QUERY = "SELECT * FROM {table_name};"
-
-# Query wrapper used to read the result schema without fetching the data
-SCHEMA_PROBE_QUERY = "SELECT * FROM ({query}) AS _schema_probe LIMIT 1;"
-
-# Query to list all databases in the PostgreSQL instance
-SELECT_DATABASES_QUERY = "SELECT datname FROM pg_database;"
 
 # Query to list all tables in the 'public' schema of the current database
 SELECT_TABLES_QUERY = """
@@ -86,24 +89,6 @@ def get_default_query(table: str) -> str:
         table_name=sql.Identifier(table)
     )
     return query.as_string()
-
-
-def get_query_data_types(dsn: str, query: str) -> dict[str, DataType]:
-    """
-    Retrieves the data types of columns in the specified table.
-
-    Args:
-        dsn (str): The Data Source Name for connecting to the PostgreSQL database.
-        query (str): The query to execute to retrieve the data types.
-
-    Returns:
-        dict[str, DataType]: A dictionary mapping column names to their data types.
-    """
-    probe_query = build_schema_probe_query(query=query)
-    with adbc_connect(uri=dsn) as conn:
-        with conn.cursor() as cur:
-            cur.execute(probe_query)
-            return {column[0]: column[1] for column in cur.description}
 
 
 def check_db_exists(dsn: str) -> bool:
@@ -195,21 +180,3 @@ def validate_table_exists(dsn: str, table: str) -> str:
             f"Table '{table}' does not exist in database."
         )
     return table
-
-
-def build_schema_probe_query(query: str) -> str:
-    """
-    Wraps the query into a subquery that returns at most one row.
-
-    The wrapper lets the driver report the result schema without fetching
-    the whole result set. It keeps the original query untouched, so table
-    names, string literals and nested LIMIT clauses stay intact.
-
-    Args:
-        query (str): The query to wrap.
-
-    Returns:
-        str: The wrapped query.
-    """
-    inner_query = query.strip().rstrip(";").strip()
-    return SCHEMA_PROBE_QUERY.format(query=inner_query)

@@ -38,4 +38,6 @@ def test_command_help_renders_options(command):
     output = render_help(command)
 
     assert "--database" in output
-    assert "--batch-size" in output
+    assert "--batch-size-bytes" in output
+    assert "--row-group-size" in output
+    assert "--batch-size " not in output

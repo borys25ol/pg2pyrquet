@@ -31,3 +31,8 @@ skip_glob = ['.ve', '.git']
 omit = [
     "pg2pyrquet/__main__.py",
 ]
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: requires a live Postgres instance",
+]

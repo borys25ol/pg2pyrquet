@@ -3,35 +3,39 @@ from unittest.mock import MagicMock, patch
 
 import pyarrow as pa
 
-from pg2pyrquet.export import export_to_parquet, reset_column_values
+from pg2pyrquet.export import export_to_parquet
 
-DATA_TYPES = {"field1": pa.int32(), "field2": pa.string()}
+SCHEMA = pa.schema([("field1", pa.int32()), ("field2", pa.string())])
 
 
-def build_rows(count: int) -> list[dict]:
+def build_batch(rows: int) -> pa.RecordBatch:
     """
-    Builds a list of fake database records matching DATA_TYPES.
+    Builds a record batch matching SCHEMA with the given number of rows.
     """
-    return [
-        {"field1": index, "field2": f"value-{index}"}
-        for index in range(count)
-    ]
+    return pa.record_batch(
+        data=[
+            pa.array(list(range(rows)), type=pa.int32()),
+            pa.array([f"value-{index}" for index in range(rows)]),
+        ],
+        schema=SCHEMA,
+    )
 
 
-def run_export(rows: list[dict], batch_size: int) -> list[int]:
+def run_export(batches: list[pa.RecordBatch]) -> MagicMock:
     """
-    Runs the export against a fake cursor and returns written batch sizes.
+    Runs the export against a fake driver and returns the writer mock.
     """
     writer = MagicMock()
+    reader = MagicMock()
+    reader.schema = SCHEMA
+    reader.__iter__.return_value = iter(batches)
+
     cursor = MagicMock()
-    cursor.__iter__.return_value = iter(rows)
+    cursor.fetch_record_batch.return_value = reader
 
     with (
         patch("pg2pyrquet.export.ParquetWriter") as writer_class,
-        patch(
-            "pg2pyrquet.export.get_query_data_types", return_value=DATA_TYPES
-        ),
-        patch("pg2pyrquet.export.psycopg.connect") as connect,
+        patch("pg2pyrquet.export.connect") as connect,
     ):
         writer_class.return_value.__enter__.return_value = writer
         connection = connect.return_value.__enter__.return_value
@@ -40,34 +44,30 @@ def run_export(rows: list[dict], batch_size: int) -> list[int]:
         export_to_parquet(
             dsn="dsn",
             output_file=Path("./data/pytest.parquet"),
-            batch_size=batch_size,
             query="SELECT * FROM test_table",
+            batch_size_bytes=1024,
+            row_group_size=10,
         )
 
-    return [
+    return writer
+
+
+def test_writes_every_batch_the_reader_yields():
+    writer = run_export(batches=[build_batch(3), build_batch(2)])
+
+    assert [
         call.kwargs["batch"].num_rows
         for call in writer.write_batch.call_args_list
-    ]
+    ] == [3, 2]
 
 
-def test_reset_column_values():
-    fields_types = {"field1": pa.int32(), "field2": pa.string()}
-    records = {"field1": [1, 2], "field2": ["a", "b"]}
-    reset_column_values(fields_types=fields_types, records=records)
-    assert records == {"field1": [], "field2": []}
+def test_passes_the_row_group_size_through():
+    writer = run_export(batches=[build_batch(1)])
+
+    assert writer.write_batch.call_args.kwargs["row_group_size"] == 10
 
 
-def test_export_writes_full_batches():
-    assert run_export(rows=build_rows(count=4), batch_size=2) == [2, 2]
+def test_writes_nothing_for_an_empty_result():
+    writer = run_export(batches=[])
 
-
-def test_export_writes_remainder_as_last_batch():
-    assert run_export(rows=build_rows(count=3), batch_size=2) == [2, 1]
-
-
-def test_export_writes_single_batch_when_rows_fit():
-    assert run_export(rows=build_rows(count=2), batch_size=10) == [2]
-
-
-def test_export_writes_nothing_for_empty_result():
-    assert run_export(rows=[], batch_size=2) == []
+    writer.write_batch.assert_not_called()
