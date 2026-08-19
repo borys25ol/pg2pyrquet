@@ -1,4 +1,5 @@
 import re
+from importlib.metadata import version
 
 import pytest
 from typer.testing import CliRunner
@@ -83,4 +84,6 @@ def test_version_is_printed():
     result = runner.invoke(app, ["--version"])
 
     assert result.exit_code == 0
-    assert "0.2.0" in ANSI_ESCAPE_PATTERN.sub("", result.output)
+    assert ANSI_ESCAPE_PATTERN.sub("", result.output).strip() == version(
+        "pg2pyrquet"
+    )
