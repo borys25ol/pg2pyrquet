@@ -44,6 +44,20 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ['3.10', '3.11', '3.12']
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pg2pyrquet_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d pg2pyrquet_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -62,3 +76,6 @@ jobs:
 
       - name: Run tests
         run: make test-cov
+
+      - name: Run integration tests
+        run: make test-integration
