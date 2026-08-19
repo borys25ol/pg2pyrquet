@@ -8,5 +8,10 @@ logs
 *.db
 .vscode
 .coverage
+.pytest_cache
+.mypy_cache
+.memsearch
+data
+*.parquet
 /logs
 reverb.json
