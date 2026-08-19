@@ -20,7 +20,7 @@ install_requires = [
     "psycopg==3.2.1",
     "psycopg-binary==3.2.1",
     "pyarrow==17.0.0",
-    "typer==0.12.4",
+    "typer==0.27.1",
 ]
 
 
