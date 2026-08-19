@@ -15,15 +15,13 @@ packages = [
     package for package in find_packages(where=".", exclude=("test*",))
 ]
 
-install_requires = (
-    [
-        "adbc_driver_postgresql==1.1.0",
-        "psycopg==3.2.1",
-        "psycopg-binary==3.2.1",
-        "pyarrow==17.0.0",
-        "typer==0.12.4",
-    ],
-)
+install_requires = [
+    "adbc_driver_postgresql==1.1.0",
+    "psycopg==3.2.1",
+    "psycopg-binary==3.2.1",
+    "pyarrow==17.0.0",
+    "typer==0.12.4",
+]
 
 
 setup(
