@@ -17,10 +17,10 @@ test-cov:
 	python -m pytest  --cov=./pg2pyrquet --cov-report term-missing ./tests
 
 check_style:
-	flake8 pg2pyrquet && isort pg2pyrquet --diff && black pg2pyrquet --check
+	flake8 pg2pyrquet tests && isort pg2pyrquet tests --check-only --diff && black pg2pyrquet tests --check
 
 lint:
-	flake8 pg2pyrquet && isort pg2pyrquet && black pg2pyrquet
+	flake8 pg2pyrquet tests && isort pg2pyrquet tests && black pg2pyrquet tests
 
 types:
 	mypy --namespace-packages -p "pg2pyrquet" --config-file setup.cfg
