@@ -15,3 +15,8 @@ data
 *.parquet
 /logs
 reverb.json
+
+# Build artifacts
+build
+dist
+*.egg-info

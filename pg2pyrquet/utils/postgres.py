@@ -61,7 +61,7 @@ def get_postgres_auth() -> str:
 
 def get_postgres_dsn(host: str, port: str, database: str) -> str:
     """
-    Generates the PostgreSQL DSN (Data Source Name) for the specified database.
+    Generates the DSN (Data Source Name) for the given database.
 
     Args:
         host (str): The hostname of the PostgreSQL server.
@@ -69,7 +69,7 @@ def get_postgres_dsn(host: str, port: str, database: str) -> str:
         database (str): The name of the PostgreSQL database.
 
     Returns:
-        str: The connection string for the PostgreSQL database.
+        str: The connection string for the database.
     """
     auth = get_postgres_auth()
     return f"postgresql://{auth}@{host}:{port}/{database}"
@@ -96,7 +96,7 @@ def check_db_exists(dsn: str) -> bool:
     Checks if a database with the specified name exists.
 
     Args:
-        dsn (str): The Data Source Name for connecting to the PostgreSQL database.
+        dsn (str): The Data Source Name for the PostgreSQL database.
 
     Returns:
         bool: True if the database exists, False otherwise.
@@ -114,15 +114,14 @@ def get_database_tables(dsn: str) -> list[str]:
     Retrieves the list of all tables in the specified database.
 
     Args:
-        dsn (str): The Data Source Name for connecting to the PostgreSQL database.
+        dsn (str): The Data Source Name for the PostgreSQL database.
 
     Returns:
         list[str]: A list of table names.
     """
-    with psycopg.connect(dsn) as conn:
-        with conn.cursor() as cur:
-            cur.execute(SELECT_TABLES_QUERY)
-            return [table_name for (table_name,) in cur.fetchall()]
+    with psycopg.connect(dsn) as conn, conn.cursor() as cur:
+        cur.execute(SELECT_TABLES_QUERY)
+        return [table_name for (table_name,) in cur.fetchall()]
 
 
 def check_table_exists(dsn: str, table: str) -> bool:
@@ -130,7 +129,7 @@ def check_table_exists(dsn: str, table: str) -> bool:
     Checks if a table with the specified name exists in the given database.
 
     Args:
-        dsn (str): The Data Source Name for connecting to the PostgreSQL database.
+        dsn (str): The Data Source Name for the PostgreSQL database.
         table (str): The name of the table to check.
 
     Returns:
@@ -144,7 +143,7 @@ def validate_database_connection(dsn: str) -> str:
     Validates that the specified database exists.
 
     Args:
-        dsn (str): The Data Source Name for connecting to the PostgreSQL database.
+        dsn (str): The Data Source Name for the PostgreSQL database.
 
     Returns:
         str: The validated database name.
@@ -166,14 +165,14 @@ def validate_table_exists(dsn: str, table: str) -> str:
     Validates that the specified table exists within the given database.
 
     Args:
-        dsn (str): The Data Source Name for connecting to the PostgreSQL database.
+        dsn (str): The Data Source Name for the PostgreSQL database.
         table (str): The name of the table to check.
 
     Returns:
         str: The validated table name.
 
     Raises:
-        TableDoesNotExistError: If the table does not exist in the specified database.
+        TableDoesNotExistError: If the table does not exist.
     """
     if not check_table_exists(dsn=dsn, table=table):
         raise TableDoesNotExistError(

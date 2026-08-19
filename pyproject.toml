@@ -1,31 +1,76 @@
-[tool.black]
-line-length = 78
-target-version = ['py310']
-skip-magic-trailing-comma = true
-include = '\.pyi?$'
-exclude = '''
-/(
-    \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.ve
-  | _build
-  | build
-  | dist
-)/
-'''
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
 
-[tool.isort]
-line_length = 78
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-ensure_newline_before_comments = true
-use_parentheses = true
-skip_gitignore = true
-skip_glob = ['.ve', '.git']
+[project]
+name = "pg2pyrquet"
+version = "0.2.0"
+description = "Postgres Exports to Apache Parquet with Python"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Borys Oliinyk", email = "oleynik.boris@gmail.com" },
+]
+classifiers = [
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "adbc-driver-postgresql==1.12.0",
+    "psycopg==3.3.4",
+    "psycopg-binary==3.3.4",
+    "pyarrow==25.0.1",
+    "typer==0.27.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/borys25ol/pg2pyrquet"
+
+[project.scripts]
+pg2pyrquet = "pg2pyrquet.__main__:app"
+
+[dependency-groups]
+dev = [
+    "mypy==2.3.1",
+    "pre-commit==4.4.0",
+    "pytest==9.1.1",
+    "pytest-cov==7.1.0",
+    "ruff==0.16.3",
+]
+
+[tool.setuptools.packages.find]
+include = ["pg2pyrquet*"]
+
+[tool.setuptools.package-data]
+pg2pyrquet = ["py.typed"]
+
+[tool.ruff]
+line-length = 78
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4", "RUF"]
+
+[tool.ruff.lint.isort]
+split-on-trailing-comma = false
+
+[tool.ruff.format]
+skip-magic-trailing-comma = true
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+allow_redefinition = true
+warn_no_return = false
+check_untyped_defs = false
+disallow_untyped_defs = true
+warn_unused_ignores = true
+follow_imports = "skip"
+strict_optional = true
+exclude = ".ve|env|logs"
 
 [tool.coverage.run]
 omit = [

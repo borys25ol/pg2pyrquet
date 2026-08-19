@@ -1,7 +1,6 @@
 import os
 from unittest.mock import MagicMock, patch
 
-import pyarrow as pa
 import pytest
 from psycopg import OperationalError
 
@@ -95,9 +94,8 @@ def test_get_default_query_escapes_embedded_quote():
 def test_get_database_tables_with_tables(mock_connect):
     mock_cursor = MagicMock()
     mock_cursor.fetchall.return_value = [("table1",), ("table2",)]
-    mock_connect.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value = (
-        mock_cursor
-    )
+    connection = mock_connect.return_value.__enter__.return_value
+    connection.cursor.return_value.__enter__.return_value = mock_cursor
 
     dsn = "postgresql://user:password@localhost:5432/testdb"
     result = get_database_tables(dsn)
@@ -110,9 +108,8 @@ def test_get_database_tables_with_tables(mock_connect):
 def test_get_database_tables_without_tables(mock_connect):
     mock_cursor = MagicMock()
     mock_cursor.fetchall.return_value = []
-    mock_connect.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value = (
-        mock_cursor
-    )
+    connection = mock_connect.return_value.__enter__.return_value
+    connection.cursor.return_value.__enter__.return_value = mock_cursor
 
     dsn = "postgresql://user:password@localhost:5432/testdb"
     result = get_database_tables(dsn)

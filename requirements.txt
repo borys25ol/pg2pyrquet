@@ -1,5 +1,0 @@
-adbc_driver_postgresql==1.12.0
-psycopg==3.3.4
-psycopg-binary==3.3.4
-pyarrow==25.0.1
-typer==0.27.1

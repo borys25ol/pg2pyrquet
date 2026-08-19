@@ -32,15 +32,17 @@ def export_database(
     row_group_size: int = DEFAULT_ROW_GROUP_SIZE,
 ) -> None:
     """
-    Dumps all tables from the specified PostgreSQL database to Parquet files.
+    Dumps every table of the database to Parquet files.
 
     Args:
         host (str): The host of the PostgreSQL database.
         port (str): The port of the PostgreSQL database.
         database (str): The name of the PostgreSQL database.
-        output_path (str): The directory where Parquet files will be saved.
-        batch_size_bytes (int, optional): How much the driver reads per batch, in bytes. Defaults to DEFAULT_BATCH_SIZE_BYTES.
-        row_group_size (int, optional): Maximum rows per Parquet row group. Defaults to DEFAULT_ROW_GROUP_SIZE.
+        output_path (str): The directory for the Parquet files.
+        batch_size_bytes (int, optional): How much the driver reads
+            per batch, in bytes.
+        row_group_size (int, optional): Maximum rows per Parquet row
+            group.
     """
     dsn = get_postgres_dsn(host=host, port=port, database=database)
 
@@ -75,17 +77,20 @@ def export_table(
     row_group_size: int = DEFAULT_ROW_GROUP_SIZE,
 ) -> None:
     """
-    Dumps the specified table from the given PostgreSQL database to a Parquet file.
+    Dumps the specified table to a Parquet file.
 
     Args:
         host (str): The host of the PostgreSQL database.
         port (str): The port of the PostgreSQL database.
         database (str): The name of the PostgreSQL database.
         table (str): The name of the table to dump.
-        output_path (str): The directory where the Parquet file will be saved.
-        output_file (str, optional): The name of the output Parquet file. Defaults to "output.parquet".
-        batch_size_bytes (int, optional): How much the driver reads per batch, in bytes. Defaults to DEFAULT_BATCH_SIZE_BYTES.
-        row_group_size (int, optional): Maximum rows per Parquet row group. Defaults to DEFAULT_ROW_GROUP_SIZE.
+        output_path (str): The directory for the Parquet file.
+        output_file (str, optional): The name of the output Parquet
+            file.
+        batch_size_bytes (int, optional): How much the driver reads
+            per batch, in bytes.
+        row_group_size (int, optional): Maximum rows per Parquet row
+            group.
     """
     dsn = get_postgres_dsn(host=host, port=port, database=database)
 
@@ -118,17 +123,20 @@ def export_query(
     row_group_size: int = DEFAULT_ROW_GROUP_SIZE,
 ) -> None:
     """
-    Dumps the specified custom query from the given PostgreSQL database to a Parquet file.
+    Dumps the result of a custom query to a Parquet file.
 
     Args:
         host (str): The host of the PostgreSQL database.
         port (str): The port of the PostgreSQL database.
         database (str): The name of the PostgreSQL database.
         query_file (str): The path of the file with SQL query.
-        output_path (str): The directory where the Parquet file will be saved.
-        output_file (str, optional): The name of the output Parquet file. Defaults to "output.parquet".
-        batch_size_bytes (int, optional): How much the driver reads per batch, in bytes. Defaults to DEFAULT_BATCH_SIZE_BYTES.
-        row_group_size (int, optional): Maximum rows per Parquet row group. Defaults to DEFAULT_ROW_GROUP_SIZE.
+        output_path (str): The directory for the Parquet file.
+        output_file (str, optional): The name of the output Parquet
+            file.
+        batch_size_bytes (int, optional): How much the driver reads
+            per batch, in bytes.
+        row_group_size (int, optional): Maximum rows per Parquet row
+            group.
     """
     dsn = get_postgres_dsn(host=host, port=port, database=database)
 

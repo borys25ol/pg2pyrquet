@@ -18,7 +18,10 @@ def test_exports_basic_types(postgres_dsn, seeded_table, tmp_path):
         output_file=output_file,
         batch_size_bytes=16 * 1024 * 1024,
         row_group_size=1_048_576,
-        query=f"SELECT id, name, created_at, tags FROM {seeded_table} ORDER BY id",
+        query=(
+            f"SELECT id, name, created_at, tags FROM {seeded_table}"
+            " ORDER BY id"
+        ),
     )
 
     rows = pq.read_table(output_file).to_pylist()
@@ -45,7 +48,9 @@ def test_exports_numeric_jsonb_and_uuid(postgres_dsn, seeded_table, tmp_path):
         output_file=output_file,
         batch_size_bytes=16 * 1024 * 1024,
         row_group_size=1_048_576,
-        query=f"SELECT id, amount, payload, ref FROM {seeded_table} ORDER BY id",
+        query=(
+            f"SELECT id, amount, payload, ref FROM {seeded_table} ORDER BY id"
+        ),
     )
 
     rows = pq.read_table(output_file).to_pylist()
