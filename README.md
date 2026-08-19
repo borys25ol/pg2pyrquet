@@ -3,9 +3,9 @@ Postgres Exports to Apache Parquet with Python (pg2pyrquet)
 
 [![forthebadge made-with-python](http://ForTheBadge.com/images/badges/made-with-python.svg)](https://www.python.org/)
 
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Checked with mypy](http://www.mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
-[![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
+[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![Pre-commit: enabled](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white&style=flat)](https://github.com/pre-commit/pre-commit)
 
 ## Description
@@ -23,22 +23,35 @@ This tool is particularly useful for data engineers and analysts who want to eff
 
 ## Installation
 
-Setup and activate a python3 virtualenv via your preferred method. e.g. and install production requirements:
+Install the package with `pip`:
+
+```shell
+pip install .
+```
+
+This puts the `pg2pyrquet` command on your PATH.
+
+### Development Setup
+
+The project uses [uv](https://docs.astral.sh/uv/). It creates the
+environment and installs the locked dependencies in one step:
 
 ```shell
 make ve
 ```
 
+`uv.lock` pins the whole dependency tree, transitive packages included,
+so every environment resolves identically.
 
-To use `pg2pyrquet`, you need to have Python installed. You can install the necessary dependencies using `pip`:
+Install the git hooks once:
 
-```sh
-pip install -r requirements.txt
+```shell
+make install_hooks
 ```
 
 ## Running the Tests
 
-Unit tests need nothing but the dev requirements:
+Unit tests need no database:
 
 ```shell
 make test
