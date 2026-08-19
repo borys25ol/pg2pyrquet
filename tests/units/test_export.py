@@ -2,7 +2,9 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pyarrow as pa
+import pytest
 
+from pg2pyrquet.core.exceptions import InvalidQueryError
 from pg2pyrquet.export import export_to_parquet, normalise_query
 
 SCHEMA = pa.schema([("field1", pa.int32()), ("field2", pa.string())])
@@ -81,3 +83,40 @@ def test_normalise_query_keeps_inner_semicolons_untouched():
     query = "SELECT ';' AS marker"
 
     assert normalise_query(query=query) == query
+
+
+def run_failing_export(error: Exception) -> None:
+    """
+    Runs the export against a driver whose execute raises the error.
+    """
+    cursor = MagicMock()
+    cursor.execute.side_effect = [None, error]
+
+    with (
+        patch("pg2pyrquet.export.ParquetWriter"),
+        patch("pg2pyrquet.export.connect") as connect,
+    ):
+        connection = connect.return_value.__enter__.return_value
+        connection.cursor.return_value.__enter__.return_value = cursor
+
+        export_to_parquet(
+            dsn="dsn",
+            output_file=Path("./data/pytest.parquet"),
+            query="SELECT 1",
+            batch_size_bytes=1024,
+            row_group_size=10,
+        )
+
+
+def test_a_read_only_violation_is_explained():
+    error = Exception("could not begin COPY: ... SQLSTATE: 25006")
+
+    with pytest.raises(InvalidQueryError, match="only reads"):
+        run_failing_export(error)
+
+
+def test_other_driver_errors_are_left_alone():
+    error = Exception("relation does not exist. SQLSTATE: 42P01")
+
+    with pytest.raises(Exception, match="42P01"):
+        run_failing_export(error)

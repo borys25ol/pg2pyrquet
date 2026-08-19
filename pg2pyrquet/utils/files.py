@@ -7,19 +7,24 @@ def read_query_from_file(query_path: Path) -> str:
     """
     Reads the query from the specified file path.
 
+    The contents are not inspected beyond being non-empty. Whether the
+    query only reads is enforced by the server, which runs every export
+    in a read-only transaction. A keyword check cannot do that job: it
+    accepts `WITH x AS (DELETE ...) SELECT ...` and rejects valid forms
+    such as `TABLE orders`.
+
     Args:
-        query_path (str): The path to the query file.
+        query_path (Path): The path to the query file.
 
     Returns:
         str: The contents of the query file.
 
     Raises:
-        InvalidQueryError: If the query is invalid.
+        InvalidQueryError: If the file is empty.
     """
-    with open(query_path) as file:
-        query = file.read()
+    query = query_path.read_text()
 
-    if "select" not in query.lower():
-        raise InvalidQueryError("Query must contain a SELECT statement.")
+    if not query.strip():
+        raise InvalidQueryError(f"Query file '{query_path}' is empty.")
 
     return query
